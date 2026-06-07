@@ -1,0 +1,4 @@
+scripts/git-hooks/* text eol=lf
+scripts/*.sh text eol=lf
+backend/db_init/*.sql text eol=lf
+backend/requirements.txt text eol=lf

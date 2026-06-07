@@ -1,0 +1,101 @@
+# version 字段已废弃，Docker Compose v2+ 无需声明
+
+services:
+  db:
+    image: mysql:8.0
+    container_name: mysql_db
+    restart: always
+    environment:
+      MYSQL_DATABASE: fancy_agent
+      MYSQL_ROOT_PASSWORD: changeme
+    volumes:
+      - ./backend/db_init:/docker-entrypoint-initdb.d
+      - mysql_data:/var/lib/mysql
+    ports:
+      - "3306:3306"
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-pchangeme"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s   # 给 MySQL 足够的启动时间再开始健康检查
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.5'
+        reservations:
+          memory: 256M
+    command:
+      - --innodb-buffer-pool-size=128M
+      - --max-connections=50
+      - --character-set-server=utf8mb4    # 修复：防止中文乱码
+      - --collation-server=utf8mb4_unicode_ci
+
+  backend:
+    build:
+      context: ./backend
+    container_name: fastapi_app
+    restart: unless-stopped              # 修复：避免 db 未就绪时无限重启
+    env_file:
+      - ./backend/.env                   # 修复：移除 volumes 里重复的 .env 挂载
+    environment:
+      # 代码执行走常驻沙箱容器（内网地址，不挂 docker.sock）
+      SANDBOX_EXEC_URL: http://sandbox:9000
+    volumes:
+      - ./backend/logs:/app/logs
+      - uploads:/data/uploads
+      - workspaces:/data/workspaces
+    deploy:
+      resources:
+        limits:
+          cpus: '0.8'
+          memory: 512M                   # 内存再平衡：让出空间给 sandbox（详见 docs/sandbox-architecture.md）
+    expose:
+      - "8000"
+    depends_on:
+      db:
+        condition: service_healthy
+      sandbox:
+        condition: service_healthy
+
+  sandbox:
+    build:
+      context: .                          # 仓库根：需 COPY backend 下的共享 runner（单一事实来源）
+      dockerfile: sandbox/Dockerfile
+    container_name: code_sandbox
+    restart: unless-stopped
+    volumes:
+      - workspaces:/workspaces            # 与 backend 共享同一卷，产物落盘后 backend 直接读
+    expose:
+      - "9000"                            # 仅 compose 内网，不对外暴露端口
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0) if urllib.request.urlopen('http://localhost:9000/health').status==200 else sys.exit(1)"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 384M
+
+  nginx:
+    image: nginx:latest                   # 修复：固定版本，避免 latest 自动升级
+    container_name: gateway
+    restart: always
+    ports:
+      - "80:80"
+    volumes:
+      - ./frontend/dist:/usr/share/nginx/html:ro   # 加 ro 只读更安全
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - uploads:/data/uploads
+    depends_on:
+      backend:
+        condition: service_started       # 修复：明确依赖 backend 启动
+
+volumes:
+  uploads:
+  workspaces:
+  mysql_data:

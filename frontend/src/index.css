@@ -1,0 +1,26 @@
+@import "tailwindcss";
+
+/* Enable class-based dark mode scoped to the app root */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* Dark mode: remap gray text to readable light tones.
+   Explicit dark:text-* utilities from Tailwind take precedence
+   due to higher specificity or later cascade position. */
+.dark .text-gray-900,
+.dark .text-gray-800,
+.dark .text-gray-700 {
+  color: #e4e4e7; /* zinc-200 */
+}
+.dark .text-gray-600,
+.dark .text-gray-500 {
+  color: #a1a1aa; /* zinc-400 */
+}
+.dark .text-gray-400,
+.dark .text-gray-300 {
+  color: #71717a; /* zinc-500 */
+}
+/* Placeholder text in dark mode */
+.dark .placeholder-gray-400::placeholder,
+.dark .placeholder-gray-500::placeholder {
+  color: #52525b; /* zinc-600 */
+}

@@ -1,0 +1,17 @@
+# 仅作用于以仓库根为 build context 的镜像（sandbox）。
+# backend / frontend 各自的 context 不受影响。
+.git
+**/__pycache__
+**/*.pyc
+node_modules
+frontend/node_modules
+frontend/dist
+backend/logs
+backend/.venv
+**/*.db
+*.env
+.env
+backend/.env
+backend/.env.prd
+.claude
+docs

@@ -1,0 +1,36 @@
+[
+  {
+    "name": "report_writer",
+    "description": "结构化技术/产品报告的写作模板",
+    "category": "writing",
+    "content": "# 报告写作步骤\n\n1. **明确读者和决策** —— 这份报告是给谁看的？看完要做什么决定？\n2. **TL;DR** —— 用 2-3 句话概括结论，放最前面。\n3. **背景** —— 为什么现在写这份？前置事实、约束、相关链接。\n4. **核心发现** —— 数据/事实，每条配一句解读，不要把分析夹在数据里。\n5. **建议** —— 给具体的下一步，标注成本和风险。\n6. **附录** —— 数据明细、参考资料。\n\n## 风格要点\n- 主动语态，少用『可能』『也许』。\n- 数字用阿拉伯数字，配上单位和时间窗口。\n- 每节开头一句结论，方便扫读。"
+  },
+  {
+    "name": "code_review_checklist",
+    "description": "代码审查通用 checklist（不针对具体语言）",
+    "category": "engineering",
+    "content": "## 代码审查清单\n\n### 正确性\n- 边界条件：空输入、超大输入、并发\n- 错误处理：异常吞掉了吗？错误信息够定位吗？\n- 数据一致性：事务、回滚、幂等\n\n### 安全\n- 用户输入校验\n- SQL 注入 / 路径穿越 / XSS\n- 鉴权与权限边界\n\n### 性能\n- N+1 查询\n- 不必要的全表扫描或大对象拷贝\n- 缓存失效策略\n\n### 可维护性\n- 命名是否自解释\n- 函数职责是否单一\n- 是否引入了不必要的抽象\n\n### 测试\n- 覆盖核心路径\n- 边界用例\n- 不依赖外部状态"
+  },
+  {
+    "name": "interview_summary",
+    "description": "用户访谈/客户对话的结构化总结模板",
+    "category": "research",
+    "content": "## 访谈总结模板\n\n**对象**：（姓名/角色/公司）\n**时间**：\n**渠道**：\n\n### 核心痛点（1-3 条）\n- 用对方原话引述，避免转译\n\n### 已尝试方案 & 不满意原因\n- 当前是怎么解决的？哪里不行？\n\n### 触发场景\n- 什么时候会想到这个问题？多频繁？\n\n### 决策因素\n- 价格、生态、合规、迁移成本……\n\n### 后续动作\n- 我需要做什么？\n- 对方需要做什么？\n- 下次跟进时间"
+  },
+  {
+    "name": "csv_profile",
+    "description": "对工作区里的 CSV 做字段概览（类型/缺失率/数值描述），含可直接运行的脚本",
+    "category": "data",
+    "content": "# CSV 概览技能\n\n用 profile.py 对一份 CSV 输出字段类型、缺失率和数值列描述。\n\n## 用法\n1. 先把要分析的 CSV 放到工作区根目录并命名为 `input.csv`（用 ws_write 写入，或把用户上传的文件复制过去）。\n2. 调用 `use_skill(\"csv_profile\")` 把脚本物化到工作区。\n3. 运行 `python_exec(script=\".skills/csv_profile/profile.py\")` 查看结果。\n\n脚本只用预装的 pandas，不联网、不读工作区以外的文件。",
+    "files": [
+      {
+        "path": "profile.py",
+        "content": "import pandas as pd\n\n# 把要分析的 CSV 命名为 input.csv 放到工作区根目录\nTARGET = \"input.csv\"\n\ntry:\n    df = pd.read_csv(TARGET)\nexcept FileNotFoundError:\n    print(f\"未找到 {TARGET}，请先把目标 CSV 命名为 input.csv 放到工作区根目录。\")\n    raise SystemExit(0)\n\nprint(f\"形状: {df.shape[0]} 行 x {df.shape[1]} 列\\n\")\nprint(\"=== 字段类型 ===\")\nprint(df.dtypes.to_string())\nprint(\"\\n=== 缺失率(%) ===\")\nprint((df.isna().mean() * 100).round(2).to_string())\nnum = df.describe(include=\"number\")\nprint(\"\\n=== 数值列描述 ===\")\nprint(num.to_string() if not num.empty else \"（无数值列）\")\n"
+      },
+      {
+        "path": "README.md",
+        "content": "# csv_profile\n\n把 CSV 命名为 input.csv 放进工作区根目录，运行 profile.py 即可得到字段类型 / 缺失率 / 数值列描述。仅用 pandas。\n"
+      }
+    ]
+  }
+]

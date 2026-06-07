@@ -1,0 +1,15 @@
+# 沙箱服务自身
+fastapi==0.115.6
+uvicorn==0.34.0
+pydantic==2.10.4
+
+# 预装的固定数据/计算环境（用户不可改）。
+# 注意：2c/2G + 384M 内存上限下，这套核心集合已较重；如需 opencv/skimage/plotly
+# 等更重的库请评估内存后再加（详见 docs/sandbox-architecture.md）。
+numpy==2.2.1
+pandas==2.2.3
+matplotlib==3.10.0
+scipy==1.15.0
+scikit-learn==1.6.0
+seaborn==0.13.2
+pillow==11.0.0
