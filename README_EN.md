@@ -48,6 +48,23 @@ Specifically, a few pain points come up when trying to use existing chatbots as 
 - **Token usage stats** — View totals, per-agent breakdown, and a 30-day daily trend
 - **JWT auth** — Access token (365 days) + httpOnly refresh token (3650 days)
 
+## Builtin Tools
+
+Besides custom MCP / HTTP API tools, the platform ships a set of ready-to-use tools — just check them when creating an agent:
+
+| Tool | Description |
+|---|---|
+| `web_search` | Web search (DuckDuckGo / Tavily) |
+| `web_fetch` | Fetch a given web page and extract its main content |
+| `python_exec` | Run Python in an isolated subprocess sandbox (whitelisted imports, restricted file access) |
+| `workspace` | Read/write the current session's file workspace; outputs appear in the sidebar automatically |
+| `scheduled_task_manager` | Let the agent create/manage scheduled tasks itself |
+| `skill_manager` | Pull skills on demand (SKILL.md + bundled scripts) and run them in the workspace |
+| `memory_manager` | Read/write long-term user memory (core memories are auto-injected into the system prompt) |
+| `prompt_template_manager` | Query reusable prompt templates |
+| `knowledge_graph_manager` | Extract/query knowledge graph nodes and edges |
+| `help_document_manager` | Query built-in help documents |
+
 ## Deployment
 
 ### Option 1: Local development (SQLite, zero dependencies)
@@ -153,6 +170,46 @@ bash deploy.sh
 `deploy.sh` handles: pull latest code → overwrite `.env` (from `backend/.env.prd`) → build frontend → restart containers. Create `backend/.env.prd` on the server beforehand (same format as `.env.docker.example`).
 
 > `uv export` automatically adds `; sys_platform == "win32"` markers for Windows-only packages (e.g. `pywin32`), so the Linux Docker build skips them cleanly.
+
+## Quick Start
+
+Once the service is running, here's how to configure your first agent:
+
+1. **Register / Log in** — Open the homepage, register an account, and log in.
+2. **Configure an LLM** — On the Models page, add an LLM with its `provider`, `model_name`, `api_key`, and a custom `base_url` (any OpenAI-compatible endpoint works — OpenAI, Anthropic, SiliconFlow, etc.).
+3. **(Optional) Set up tools** — When you need external capabilities, configure tools first:
+   - **MCP** — Paste a Claude Desktop-format MCP config to import
+   - **HTTP API Tool** — Wrap any REST endpoint into a tool via the wizard (URL, method, params, response extraction)
+   - **Image Tools** — Connect image generation providers
+4. **Create an Agent** — On the Agents page, create an agent: pick an LLM, write a system prompt, check the tools to bind (MCP / API tools / builtin tools), and optionally enable human-in-the-loop approval.
+5. **Start chatting** — Go to the chat page, select your agent, and start a streaming conversation with file upload, tool-call visibility, and branch/regenerate support.
+
+## Bot / Webhook Integrations
+
+The platform can connect agents to inbound webhooks, triggered by external events or chat bots. Inbound webhook endpoints are **public (no login required)** and verified per channel via signatures / tokens. **Human-in-the-loop approval is automatically skipped in webhook context** (no human can intervene, so tools execute directly). All channels require a **publicly accessible address**.
+
+| Channel | Endpoint | Required credential | Verification |
+|---|---|---|---|
+| Generic HTTP | `/api/v1/webhooks/{slug}` | Auto-generated secret | HMAC-SHA256 (`X-Signature` header) |
+| Telegram | `/api/v1/telegram/webhooks/{slug}` | Bot Token | `x-telegram-bot-api-secret-token` header |
+| DingTalk | `/api/v1/dingtalk/webhooks/{slug}` | App Secret | HMAC-SHA256 + timestamp |
+| Discord | `/api/v1/discord/interactions/{slug}` | Public Key | Ed25519 signature |
+
+On the Inbound Webhooks page, pick a channel and enter its credential — the system generates the public URL (and an internal secret).
+
+**Generic HTTP webhook** — The simplest option, ideal for triggering an agent from your own script or system. Request body:
+
+```json
+{ "content": "message for the agent", "metadata": {} }
+```
+
+The request must include an `X-Signature: sha256=<HMAC>` header, where the signature is `HMAC-SHA256(secret, raw_request_body)`. The response returns `session_id`, `message_id`, and the agent's reply `content`.
+
+**Chat bot channels** — Detailed platform-side setup steps (docs are in Chinese):
+
+- DingTalk: [docs/dingtalk-webhook-setup.md](docs/dingtalk-webhook-setup.md)
+- Telegram: [docs/telegram-webhook-setup.md](docs/telegram-webhook-setup.md)
+- Discord: [docs/discord-webhook-setup.md](docs/discord-webhook-setup.md)
 
 ## Environment Variables
 
@@ -281,3 +338,18 @@ fancy_agent/
     │   └── pages/        # page components
     └── package.json
 ```
+
+## More Documentation
+
+Topic-specific docs under `docs/` (Chinese):
+
+| Doc | Description |
+|---|---|
+| [dingtalk-webhook-setup.md](docs/dingtalk-webhook-setup.md) | Full DingTalk bot setup steps and troubleshooting |
+| [telegram-webhook-setup.md](docs/telegram-webhook-setup.md) | Full Telegram bot setup steps and troubleshooting |
+| [discord-webhook-setup.md](docs/discord-webhook-setup.md) | Full Discord slash command setup steps and troubleshooting |
+| [sandbox-architecture.md](docs/sandbox-architecture.md) | Security architecture and design of the code execution sandbox |
+| [local-limitations.md](docs/local-limitations.md) | Feature differences and trade-offs between SQLite and MySQL |
+| [项目结构说明.md](docs/项目结构说明.md) | Detailed project directory structure |
+| [stream-interrupt-persist-bug.md](docs/stream-interrupt-persist-bug.md) | Post-mortem of the stream interrupt persistence bug |
+| [webhook-smoke-test.md](docs/webhook-smoke-test.md) | Webhook smoke test notes |

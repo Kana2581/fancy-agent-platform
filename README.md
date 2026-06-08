@@ -48,6 +48,23 @@
 - **Token 用量统计** — 查看总量、按 Agent 分组及最近 30 天每日趋势
 - **JWT 鉴权** — Access Token (365天) + httpOnly Refresh Token (3650天)
 
+## 内置工具
+
+除了自定义的 MCP / HTTP API 工具，平台还预置了一批开箱即用的工具，在创建 Agent 时勾选即可绑定：
+
+| 工具 | 说明 |
+|---|---|
+| `web_search` | 联网搜索（DuckDuckGo / Tavily） |
+| `web_fetch` | 抓取指定网页并提取正文 |
+| `python_exec` | 隔离子进程沙箱里执行 Python 代码（白名单导入、受限文件访问） |
+| `workspace` | 读写当前会话的文件工作区，产物自动出现在侧边栏 |
+| `scheduled_task_manager` | 让 Agent 自己创建/管理定时任务 |
+| `skill_manager` | 按需拉取技能（SKILL.md + 附带脚本）并在工作区运行 |
+| `memory_manager` | 读写用户长期记忆（core 记忆会自动注入系统提示词） |
+| `prompt_template_manager` | 查询可复用的提示词模板 |
+| `knowledge_graph_manager` | 抽取/查询知识图谱节点与关系 |
+| `help_document_manager` | 查询内置帮助文档 |
+
 ## 部署方式
 
 ### 方式一：本地开发（SQLite，零依赖）
@@ -153,6 +170,46 @@ bash deploy.sh
 `deploy.sh` 自动完成：拉取最新代码 → 覆盖 `.env`（从 `backend/.env.prd`）→ 构建前端 → 重启容器。服务器上需提前创建 `backend/.env.prd`（格式同 `.env.docker.example`）。
 
 > `uv export` 会自动为 Windows 专属包（如 `pywin32`）添加 `; sys_platform == "win32"` 标记，确保 Linux 镜像构建时跳过它们。
+
+## 快速上手
+
+服务跑起来后，按下面的流程配置出你的第一个 Agent：
+
+1. **注册 / 登录** — 打开首页注册账号，登录后进入主界面。
+2. **配置 LLM 模型** — 在「模型」页新增一个 LLM，填入 `provider`、`model_name`、`api_key`，以及自定义的 `base_url`（任意 OpenAI 兼容接口都支持，如 OpenAI、Anthropic、硅基流动）。
+3. **（可选）准备工具** — 需要外部能力时，先配置工具：
+   - **MCP** — 粘贴 Claude Desktop 格式的 MCP 配置即可导入
+   - **HTTP API 工具** — 通过向导把任意 REST 接口封装成工具（URL、方法、参数、响应提取四步）
+   - **图像工具** — 接入图像生成供应商
+4. **创建 Agent** — 在「助手」页新建 Agent：选择 LLM、写系统提示词、勾选要绑定的工具（MCP / API 工具 / 内置工具），可选开启 Human-in-the-loop 审批。
+5. **开始对话** — 进入聊天页，选中 Agent 即可流式对话，支持上传文件、查看工具调用、分支重生成。
+
+## Bot / Webhook 接入
+
+平台支持把 Agent 接到外部入站 Webhook，被外部事件或聊天机器人触发。入站 Webhook 端点是**公开的（无需登录）**，按通道各自做签名 / 令牌校验；**在 Webhook 上下文中 Human-in-the-loop 审批会自动跳过**（无法人工介入，直接执行）。所有通道都需要服务有**公网可访问地址**。
+
+| 通道 | 端点 | 必填凭证 | 校验方式 |
+|---|---|---|---|
+| 通用 HTTP | `/api/v1/webhooks/{slug}` | 自动生成 secret | HMAC-SHA256（`X-Signature` 头） |
+| Telegram | `/api/v1/telegram/webhooks/{slug}` | Bot Token | `x-telegram-bot-api-secret-token` 头 |
+| 钉钉 | `/api/v1/dingtalk/webhooks/{slug}` | App Secret | HMAC-SHA256 + 时间戳 |
+| Discord | `/api/v1/discord/interactions/{slug}` | Public Key | Ed25519 签名 |
+
+在「入站 Webhook」页选择对应通道并填入凭证后，系统会生成正式 URL（和内部 secret）。
+
+**通用 HTTP Webhook** — 最简单，适合从自己的脚本/系统触发 Agent。请求体：
+
+```json
+{ "content": "要发给 Agent 的消息", "metadata": {} }
+```
+
+请求需带 `X-Signature: sha256=<HMAC>` 头，签名为 `HMAC-SHA256(secret, 原始请求体)`。响应返回 `session_id`、`message_id` 和 Agent 回复 `content`。
+
+**聊天机器人通道** — 详细的平台侧配置步骤见各自文档：
+
+- 钉钉：[docs/dingtalk-webhook-setup.md](docs/dingtalk-webhook-setup.md)
+- Telegram：[docs/telegram-webhook-setup.md](docs/telegram-webhook-setup.md)
+- Discord：[docs/discord-webhook-setup.md](docs/discord-webhook-setup.md)
 
 ## 环境变量
 
@@ -281,3 +338,18 @@ fancy_agent/
     │   └── pages/        # 页面组件
     └── package.json
 ```
+
+## 更多文档
+
+`docs/` 目录下的专题文档：
+
+| 文档 | 说明 |
+|---|---|
+| [dingtalk-webhook-setup.md](docs/dingtalk-webhook-setup.md) | 钉钉 Bot 接入完整步骤与排障 |
+| [telegram-webhook-setup.md](docs/telegram-webhook-setup.md) | Telegram Bot 接入完整步骤与排障 |
+| [discord-webhook-setup.md](docs/discord-webhook-setup.md) | Discord 斜杠命令接入完整步骤与排障 |
+| [sandbox-architecture.md](docs/sandbox-architecture.md) | 代码执行沙箱的安全架构与设计 |
+| [local-limitations.md](docs/local-limitations.md) | SQLite 与 MySQL 的功能差异及取舍 |
+| [项目结构说明.md](docs/项目结构说明.md) | 项目目录结构详解 |
+| [stream-interrupt-persist-bug.md](docs/stream-interrupt-persist-bug.md) | 流式中断持久化问题的复盘记录 |
+| [webhook-smoke-test.md](docs/webhook-smoke-test.md) | Webhook 冒烟测试记录 |
