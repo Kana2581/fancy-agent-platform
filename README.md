@@ -80,26 +80,44 @@ npm run dev
 
 ### 方式三：生产部署（Docker Compose）
 
-所有服务容器化，推荐用于服务器部署。
+所有服务容器化（MySQL + FastAPI + 代码沙箱 + Nginx），推荐用于服务器部署。
 
 **首次部署**
 
 ```bash
-# 1. 配置环境变量
+# 1. 配置后端环境变量
 cp backend/.env.docker.example backend/.env
-# 编辑 backend/.env，至少修改 SECRET_KEY 为随机字符串
+```
 
-# 2. 生成 requirements.txt（Docker 镜像构建依赖此文件）
-cd backend && uv export --no-hashes --format requirements-txt -o requirements.txt && cd ..
+打开 `backend/.env`，**必须修改以下两项**：
 
-# 3. 构建前端静态文件
+| 变量 | 说明 |
+|---|---|
+| `SECRET_KEY` | 改为任意随机字符串（用于 JWT 签名），留占位符则所有用户 token 不安全 |
+| `OSS_URL` | 改为服务器实际地址，如 `http://your-server-ip/files`，用于上传文件的访问链接 |
+
+```bash
+# 2. 配置前端 API 地址（必须在构建前修改）
+# 编辑 frontend/.env.production，将 VITE_API_BASE 改为实际服务器地址：
+# VITE_API_BASE=http://your-server-ip
+```
+
+> **为什么要改**：前端打包时会将 API 地址编译进静态文件，Nginx 直接挂载 `frontend/dist/` 目录，不会在容器内重新构建。地址写错了访问页面会报网络错误。
+
+```bash
+# 3. 构建前端静态文件（必须在 docker compose 之前完成）
 cd frontend && npm install && npm run build && cd ..
 
-# 4. 启动容器
+# 4. （依赖有变更时）重新生成 requirements.txt
+# cd backend && uv export --no-hashes --format requirements-txt -o requirements.txt && cd ..
+
+# 5. 启动所有容器
 docker compose up --build -d
 ```
 
 启动完成后访问 `http://your-server-ip`，注册账号即可使用。
+
+> **注意**：首次启动会拉取 MySQL 8.0 / Python 3.12-slim 等基础镜像，国内服务器建议提前配置 Docker 镜像加速（Docker Desktop → Settings → Docker Engine 中添加 `registry-mirrors`）。
 
 **后续更新**
 
@@ -107,7 +125,7 @@ docker compose up --build -d
 bash deploy.sh
 ```
 
-`deploy.sh` 自动完成：拉取最新代码 → 覆盖 `.env`（从 `backend/.env.prd`）→ 构建前端 → 重启容器。服务器上需提前创建 `backend/.env.prd`。
+`deploy.sh` 自动完成：拉取最新代码 → 覆盖 `.env`（从 `backend/.env.prd`）→ 构建前端 → 重启容器。服务器上需提前创建 `backend/.env.prd`（格式同 `.env.docker.example`）。
 
 > `uv export` 会自动为 Windows 专属包（如 `pywin32`）添加 `; sys_platform == "win32"` 标记，确保 Linux 镜像构建时跳过它们。
 
