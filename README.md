@@ -1,5 +1,7 @@
 # Fancy Agent
 
+[English](./README_EN.md) | 中文
+
 一个全栈 AI Agent 平台。支持配置 LLM、MCP 服务器，并将它们组合成 Agent 进行流式对话，同时内置独立的图像生成工作台。
 
 ## 项目背景
