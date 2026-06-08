@@ -9,12 +9,12 @@ from pydantic import Field
 
 class AgentBase(BaseModel):
 
-    avatar: Optional[str]
+    avatar: Optional[str] = None
     model_id: int
-    description: Optional[str]
-    system_prompt: Optional[str]
-    max_token_size: Optional[int]
-    human_in_the_loop: Optional[bool]=Field(default=False)
+    description: Optional[str] = None
+    system_prompt: Optional[str] = None
+    max_token_size: Optional[int] = None
+    human_in_the_loop: Optional[bool] = Field(default=False)
 
 class AgentCreate(AgentBase):
     mcp_ids: Optional[List[int]] = None
