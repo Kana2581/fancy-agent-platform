@@ -84,7 +84,6 @@ async def test_api_tool(
     tool = await service.get_tool(tool_id)
     if not tool or tool.user_id != user_id:
         raise HTTPException(status_code=404, detail="API tool not found")
-    params={"params"}
     config = {
         "name": tool.name,
         "description": tool.description,
