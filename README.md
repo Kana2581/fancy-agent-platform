@@ -65,6 +65,8 @@
 | `knowledge_graph_manager` | 抽取/查询知识图谱节点与关系 |
 | `help_document_manager` | 查询内置帮助文档 |
 
+> **关于联网搜索**：`web_search` 可选 DuckDuckGo（默认）或 Tavily（`SEARCH_PROVIDER=tavily`，需 API Key）。国内网络环境下两者通常都需要科学上网；但在阿里云等国内服务器上实测 **Tavily 可直接访问，DuckDuckGo 不行**。部署在国内服务器时建议改用 Tavily。
+
 ## 部署方式
 
 ### 方式一：本地开发（SQLite，零依赖）

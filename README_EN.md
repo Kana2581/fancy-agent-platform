@@ -65,6 +65,8 @@ Besides custom MCP / HTTP API tools, the platform ships a set of ready-to-use to
 | `knowledge_graph_manager` | Extract/query knowledge graph nodes and edges |
 | `help_document_manager` | Query built-in help documents |
 
+> **About web search**: `web_search` can use DuckDuckGo (default) or Tavily (`SEARCH_PROVIDER=tavily`, requires an API key). In mainland China both typically need a VPN; however, on domestic servers like Alibaba Cloud, **Tavily is reachable directly while DuckDuckGo is not**. Prefer Tavily when deploying on a server in mainland China.
+
 ## Deployment
 
 ### Option 1: Local development (SQLite, zero dependencies)
