@@ -55,6 +55,27 @@ function toolToForm(t: ApiToolOut): WizardForm {
   };
 }
 
+// 把界面里以字符串保存的 default 按参数声明类型转换；
+// integer/number/boolean 必须转，否则会被原样当字符串发出（见 #1 bug）。
+function coerceDefault(type: ParamConfig['type'], raw: unknown): unknown {
+  if (raw === null || raw === undefined || raw === '') return null;
+  if (typeof raw !== 'string') return raw;
+  switch (type) {
+    case 'integer': {
+      const n = parseInt(raw, 10);
+      return Number.isNaN(n) ? null : n;
+    }
+    case 'number': {
+      const n = parseFloat(raw);
+      return Number.isNaN(n) ? null : n;
+    }
+    case 'boolean':
+      return raw.trim().toLowerCase() === 'true';
+    default:
+      return raw;
+  }
+}
+
 function formToCreate(f: WizardForm): ApiToolCreate {
   const headers: Record<string, string> = {};
   for (const { key, value } of f.headers) {
@@ -62,6 +83,11 @@ function formToCreate(f: WizardForm): ApiToolCreate {
   }
   let fixed_params: Record<string, unknown> = {};
   try { fixed_params = JSON.parse(f.fixed_params_json); } catch { /* ignore */ }
+
+  const tool_params = f.tool_params.map(p => ({
+    ...p,
+    default: p.required ? null : coerceDefault(p.type, p.default),
+  }));
 
   return {
     name: f.name.trim(),
@@ -71,7 +97,7 @@ function formToCreate(f: WizardForm): ApiToolCreate {
     param_location: f.param_location,
     headers,
     fixed_params,
-    tool_params: f.tool_params,
+    tool_params,
     response_extract: f.response_extract,
     response_max_chars: f.response_max_chars,
   };
@@ -83,7 +109,7 @@ const inputCls = 'w-full px-4 py-3 bg-white dark:bg-zinc-800 border border-gray-
 const selectCls = 'w-full px-4 py-3 bg-white dark:bg-zinc-800 border border-gray-300 dark:border-zinc-700 rounded-2xl focus:ring-2 focus:ring-gray-400 dark:focus:ring-zinc-500/50 outline-none transition-all text-gray-800 dark:text-white text-sm';
 const labelCls = 'block text-sm font-medium text-gray-800 mb-1.5';
 
-function StepIndicator({ step }: { step: number }) {
+function StepIndicator({ step, onJump }: { step: number; onJump?: (n: number) => void }) {
   const steps = ['基本信息', 'API 配置', '参数配置', '响应配置'];
   return (
     <div className="flex items-center justify-between mb-8">
@@ -93,8 +119,13 @@ function StepIndicator({ step }: { step: number }) {
         const done = num < step;
         return (
           <React.Fragment key={num}>
-            <div className="flex flex-col items-center gap-1.5">
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold transition-all ${
+            <button
+              type="button"
+              onClick={() => onJump?.(num)}
+              disabled={!onJump}
+              className="flex flex-col items-center gap-1.5 group focus:outline-none disabled:cursor-default"
+            >
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold transition-all ${onJump ? 'group-hover:ring-2 group-hover:ring-gray-300 dark:group-hover:ring-zinc-600 cursor-pointer' : ''} ${
                 active ? 'bg-gray-900 dark:bg-white text-white dark:text-gray-900 shadow-lg' :
                 done  ? 'bg-green-400/80 text-white' :
                          'bg-gray-100 dark:bg-zinc-800 text-gray-500'
@@ -102,7 +133,7 @@ function StepIndicator({ step }: { step: number }) {
                 {done ? <Check size={14} /> : num}
               </div>
               <span className={`text-xs ${active ? 'text-gray-800 font-medium' : 'text-gray-500'}`}>{label}</span>
-            </div>
+            </button>
             {i < steps.length - 1 && (
               <div className={`flex-1 h-0.5 mx-2 rounded transition-all ${done ? 'bg-green-400/60' : 'bg-gray-100 dark:bg-zinc-800'}`} />
             )}
@@ -522,7 +553,7 @@ const ApiToolWizard: React.FC<ApiToolWizardProps> = ({ initialTool, onSave, onCa
 
   return (
     <div>
-      <StepIndicator step={step} />
+      <StepIndicator step={step} onJump={(n) => { setErrors([]); setStep(n as typeof step); }} />
 
       {errors.length > 0 && (
         <div className="mb-4 p-3 bg-red-400/10 border border-red-400/30 rounded-xl">
