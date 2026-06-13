@@ -139,11 +139,11 @@ All services containerized (MySQL + FastAPI + code sandbox + Nginx). Recommended
 cp backend/.env.docker.example backend/.env
 ```
 
-Open `backend/.env` and **change these two values**:
+Open `backend/.env` and **review these two values**:
 
 | Variable | Description |
 |---|---|
-| `SECRET_KEY` | Replace with any random string (used for JWT signing) — leaving the placeholder is a security risk |
+| `SECRET_KEY` | Has a default (`super-secret-key`), so the app boots without it; for production, **strongly recommended** to replace with any random string (used for JWT signing) — otherwise all user tokens are insecure |
 | `OSS_URL` | Set to your server's actual address, e.g. `http://your-server-ip/files` — used as the base URL for uploaded file links |
 
 ```bash
@@ -226,14 +226,14 @@ The backend reads `backend/.env` — **all backend commands must be run from the
 | Variable | Required | Description |
 |---|---|---|
 | `DATABASE_URL` | ✅ | SQLite: `sqlite+aiosqlite:///./fancy_agent.db`; MySQL: `mysql+asyncmy://user:pass@host/db` |
-| `SECRET_KEY` | ✅ | JWT signing key — **must be set to a random string; changing it invalidates all active sessions** |
+| `SECRET_KEY` | — | JWT signing key — has a default (`super-secret-key`), so it boots without being set; set a random string in production. Changing it invalidates all active sessions |
 | `OSS_URL` | ✅ | Base URL for uploaded files; use `http://localhost:8000` for local development |
 | `UPLOAD_DIR` | ✅ | File upload storage directory, e.g. `./data/uploads` |
 | `WORKSPACE_DIR` | ✅ | Agent workspace directory, e.g. `./data/workspaces` |
 | `SEARCH_PROVIDER` | — | `duckduckgo` (default) or `tavily` |
 | `TAVILY_API_KEY` | — | Required when `SEARCH_PROVIDER=tavily` |
 | `EMAIL_ENABLED` | — | Enable email agent (`true` / `false`, default `false`) |
-| `EMAIL_PROVIDER` | — | `gmail` / `163` / `qq` / `outlook` |
+| `EMAIL_PROVIDER` | — | `gmail` / `163` / `qq` / `outlook` (only `163` has been tested — **163 recommended**; the others are unverified) |
 | `EMAIL_ADDRESS` | — | Mailbox address |
 | `EMAIL_PASSWORD` | — | Mailbox password (Gmail requires an app-specific password) |
 

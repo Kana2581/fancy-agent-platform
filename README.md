@@ -139,11 +139,11 @@ npm run dev
 cp backend/.env.docker.example backend/.env
 ```
 
-打开 `backend/.env`，**必须修改以下两项**：
+打开 `backend/.env`，**至少关注以下两项**：
 
 | 变量 | 说明 |
 |---|---|
-| `SECRET_KEY` | 改为任意随机字符串（用于 JWT 签名），留占位符则所有用户 token 不安全 |
+| `SECRET_KEY` | 有默认值（`super-secret-key`），不改也能启动；但生产环境**强烈建议**改为任意随机字符串（用于 JWT 签名），否则所有用户 token 不安全 |
 | `OSS_URL` | 改为服务器实际地址，如 `http://your-server-ip/files`，用于上传文件的访问链接 |
 
 ```bash
@@ -233,14 +233,14 @@ bash deploy.sh
 | 变量 | 必填 | 说明 |
 |---|---|---|
 | `DATABASE_URL` | ✅ | SQLite：`sqlite+aiosqlite:///./fancy_agent.db`；MySQL：`mysql+asyncmy://user:pass@host/db` |
-| `SECRET_KEY` | ✅ | JWT 签名密钥，**必须设置为随机字符串，修改后所有已登录会话失效** |
+| `SECRET_KEY` | — | JWT 签名密钥，有默认值（`super-secret-key`），不设置也能启动；生产环境务必改为随机字符串，修改后所有已登录会话失效 |
 | `OSS_URL` | ✅ | 上传文件的访问基础 URL，本地开发填 `http://localhost:8000` |
 | `UPLOAD_DIR` | ✅ | 文件上传存储目录，如 `./data/uploads` |
 | `WORKSPACE_DIR` | ✅ | Agent 工作区目录，如 `./data/workspaces` |
 | `SEARCH_PROVIDER` | — | `duckduckgo`（默认）或 `tavily` |
 | `TAVILY_API_KEY` | — | `SEARCH_PROVIDER=tavily` 时必填 |
 | `EMAIL_ENABLED` | — | 是否启用邮件 Agent（`true` / `false`，默认 `false`） |
-| `EMAIL_PROVIDER` | — | `gmail` / `163` / `qq` / `outlook` |
+| `EMAIL_PROVIDER` | — | `gmail` / `163` / `qq` / `outlook`（目前仅实测过 `163`，**推荐使用 163**，其余未验证） |
 | `EMAIL_ADDRESS` | — | 邮箱地址 |
 | `EMAIL_PASSWORD` | — | 邮箱密码（Gmail 需用应用专用密码） |
 
