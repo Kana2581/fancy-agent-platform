@@ -38,15 +38,6 @@ npm run build    # production build (tsc + vite)
 npm run lint     # ESLint check
 ```
 
-### Sync API types after backend changes
-
-```bash
-cd frontend
-npx openapi-typescript-codegen --input ./openapi.json --output src/api --client axios
-```
-
-If the backend can't run, manually add type files under `src/api/models/` and a service class under `src/api/services/`, then **export them from `src/api/index.ts`** (required, or the types won't be reachable).
-
 ### Docker (full stack)
 
 Before the first build (or after backend dependency changes), regenerate `backend/requirements.txt`:
@@ -193,7 +184,7 @@ Standard CRUD resources following the new-module checklist. Non-obvious behavior
 
 ### Frontend Structure
 
-- `src/api/` — generated via `openapi-typescript-codegen`; manually added types must also be exported from `src/api/index.ts`
+- `src/api/` — frontend API client code originally generated from the OpenAPI schema. Manual edits are acceptable in this repository when keeping the client in sync pragmatically; export any manual additions from `src/api/index.ts`
 - `src/context/AppContext.tsx` — global state (agents, sessions, LLMs, MCPs), loaded once on auth
 - `src/hooks/useMessageHandler.ts` — core chat hook: message tree, SSE parsing, branching, sibling nav, tool approval, regenerate, compress, stream abort
 - `src/utils/TokenManager.ts` — JWT in localStorage, auth guard
