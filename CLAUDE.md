@@ -41,7 +41,7 @@ npm run lint     # ESLint check
 ### Quality Gates
 
 Before considering a change complete:
-- **Frontend** changes must pass `npm run lint` **and** `npm run build` (the latter runs `tsc -b`). Trivial UI tweaks don't need *new* test cases, but the lint + type gate is non-negotiable. (A local `Stop` hook runs `npm run lint` automatically; see `.claude/hooks/frontend-lint.sh`.)
+- **Frontend** changes must pass `npm run lint` **and** `npm run build` (the latter runs `tsc -b`). Trivial UI tweaks don't need *new* test cases, but the lint + type gate is non-negotiable.
 - **Backend** changes should run the relevant `uv run pytest` — at least the affected `tests/unit` — and add/extend tests for new logic. This is the same bar as frontend, not a lighter one.
 
 ### Docker (full stack)
