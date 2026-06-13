@@ -4,6 +4,12 @@
 
 一个全栈 AI Agent 平台。支持配置 LLM、MCP 服务器，并将它们组合成 Agent 进行流式对话，同时内置独立的图像生成工作台。
 
+## 演示
+
+- Bilibili: [我做了一个全栈 AI Agent 平台：支持 MCP、HTTP API 工具、图像工作台](https://www.bilibili.com/video/BV1MVJn69EPP/?share_source=copy_web&vd_source=f74e0c665f4fb75caa2057a3e0d75600)
+
+![工作区与图像工作台演示](docs/assets/workspace-image-studio-demo.gif)
+
 ## 项目背景
 
 这是一个个人练手项目，在折腾各种 AI 工具的过程中攒出来的。
@@ -362,7 +368,3 @@ fancy_agent/
 | [项目结构说明.md](docs/项目结构说明.md) | 项目目录结构详解 |
 | [stream-interrupt-persist-bug.md](docs/stream-interrupt-persist-bug.md) | 流式中断持久化问题的复盘记录 |
 | [webhook-smoke-test.md](docs/webhook-smoke-test.md) | Webhook 冒烟测试记录 |
-
-## 演示视频
-
-- Bilibili: [我做了一个全栈 AI Agent 平台：支持 MCP、HTTP API 工具、图像工作台](https://www.bilibili.com/video/BV1MVJn69EPP/?share_source=copy_web&vd_source=f74e0c665f4fb75caa2057a3e0d75600)
