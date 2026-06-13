@@ -4,6 +4,12 @@
 
 A full-stack AI Agent platform. Configure LLMs and MCP servers, compose them into agents for streaming chat sessions, and build with a built-in image generation studio.
 
+## Demo
+
+- Bilibili: [I built a full-stack AI Agent platform: MCP, HTTP API tools, and an image studio](https://www.bilibili.com/video/BV1MVJn69EPP/?share_source=copy_web&vd_source=f74e0c665f4fb75caa2057a3e0d75600)
+
+![Workspace and image studio demo](docs/assets/workspace-image-studio-demo.gif)
+
 ## Background
 
 This is a personal side project — something I built while tinkering with various AI tools.
