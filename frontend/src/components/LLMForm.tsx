@@ -45,8 +45,9 @@ const LLMForm: React.FC<LLMFormProps> = ({
         llm_id: editingId ?? null,
       });
       setTestResult(res);
-    } catch (e: any) {
-      const detail = e?.body?.detail || e?.message || '请求失败';
+    } catch (e) {
+      const err = e as { body?: { detail?: unknown }; message?: string };
+      const detail = err?.body?.detail || err?.message || '请求失败';
       setTestResult({ success: false, message: typeof detail === 'string' ? detail : JSON.stringify(detail) });
     } finally {
       setTesting(false);

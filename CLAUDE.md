@@ -38,6 +38,12 @@ npm run build    # production build (tsc + vite)
 npm run lint     # ESLint check
 ```
 
+### Quality Gates
+
+Before considering a change complete:
+- **Frontend** changes must pass `npm run lint` **and** `npm run build` (the latter runs `tsc -b`). Trivial UI tweaks don't need *new* test cases, but the lint + type gate is non-negotiable.
+- **Backend** changes should run the relevant `uv run pytest` — at least the affected `tests/unit` — and add/extend tests for new logic. This is the same bar as frontend, not a lighter one.
+
 ### Docker (full stack)
 
 Before the first build (or after backend dependency changes), regenerate `backend/requirements.txt`:
@@ -57,6 +63,17 @@ bash deploy.sh   # pulls origin/main, copies backend/.env.prd → backend/.env, 
 ## Commit Conventions
 
 Use short prefixed messages matching the existing history: `feature:`, `fix:`, `docs:`, `refactor:`. Keep each commit focused on one logical change; avoid mixed backend/frontend commits unless tightly coupled.
+
+**The `master` branch is protected — do not push to it directly.** Submit changes via a feature branch + PR:
+
+```bash
+git switch -c your-branch-name
+git add .
+git commit -m "type: short description"
+git push -u origin your-branch-name
+```
+
+Then open a PR on GitHub to merge the branch back into `master`.
 
 ## Architecture
 

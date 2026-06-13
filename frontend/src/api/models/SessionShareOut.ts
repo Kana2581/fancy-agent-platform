@@ -16,7 +16,7 @@ export type SessionShareCreate = {
 export type SharedMessage = {
     id: string;
     type: string;
-    content: any;
+    content: unknown;
     name?: (string | null);
     created_at: string;
 };

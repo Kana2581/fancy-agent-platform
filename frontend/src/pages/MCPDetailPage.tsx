@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Zap, RefreshCw } from 'lucide-react';
-import { McpService, type ToolOut } from '../api';
+import { McpService, type ToolOut, type MCPOut } from '../api';
 
 /** 简单超时封装 */
 function withTimeout<T>(promise: Promise<T>, ms = 5000): Promise<T> {
@@ -17,7 +17,7 @@ const MCPDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
 
-  const [mcp, setMcp] = useState<any>(null);
+  const [mcp, setMcp] = useState<MCPOut | null>(null);
   const [mcpLoading, setMcpLoading] = useState(true);
 
   const [tools, setTools] = useState<ToolOut[]>([]);
@@ -50,7 +50,7 @@ const MCPDetailPage: React.FC = () => {
       );
       setTools(data);
       setToolsLoaded(true);
-    } catch (err) {
+    } catch {
       setToolsError('Tools 加载失败或超时');
     } finally {
       setToolsLoading(false);

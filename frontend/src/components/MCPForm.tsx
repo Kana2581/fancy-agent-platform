@@ -5,7 +5,7 @@ import ThemedSelect from './ThemedSelect';
 interface MCPFormData {
   mcp_name: string;
   transport: string;
-  config_json: Record<string, any>;
+  config_json: Record<string, unknown>;
   is_enabled: boolean;
 }
 
@@ -140,7 +140,9 @@ const MCPForm: React.FC<MCPFormProps> = ({ form, onChange, onSave, onCancel }) =
           onChange={(e) => {
             try {
               onChange({ ...form, config_json: JSON.parse(e.target.value) });
-            } catch (err) {}
+            } catch {
+              /* ignore invalid JSON while the user is still typing */
+            }
           }}
           placeholder='{"key": "value"}'
           rows={5}

@@ -32,6 +32,14 @@
 ## Commit & Pull Request Guidelines
 - Match existing commit prefixes from history: `feature:`, `fix:`, `docs:`, `refactor:` (short, scoped message after prefix).
 - Keep each commit focused on one logical change; avoid mixed backend/frontend refactors unless tightly coupled.
+- The `master` branch is protected — do not push to it directly. Work on a feature branch and merge via PR:
+  ```bash
+  git switch -c your-branch-name
+  git add .
+  git commit -m "type: short description"
+  git push -u origin your-branch-name
+  ```
+  Then open a PR on GitHub to merge into `master`.
 - PRs should include: purpose, impacted directories (e.g., `backend/app/services`, `frontend/src/pages`), manual verification steps, and UI screenshots.
 
 ## Security & Configuration Tips

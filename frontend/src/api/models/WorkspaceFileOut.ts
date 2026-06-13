@@ -1,6 +1,6 @@
 /* manually added — backend route is GET /api/v1/workspace/{session_id}/files */
 /* tslint:disable */
-/* eslint-disable */
+ 
 export type WorkspaceFileOut = {
     file_id: number;
     name: string;

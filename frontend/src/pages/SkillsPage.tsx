@@ -39,7 +39,7 @@ const SkillsPage: React.FC = () => {
   const loadSkills = async (scope: 'all' | 'user' | 'system' | 'session' = 'all') => {
     try {
       setLoading(true);
-      const data = await SkillsService.listSkills(undefined, undefined, undefined, scope as any);
+      const data = await SkillsService.listSkills(undefined, undefined, undefined, scope);
       setSkills(data);
     } catch (e) {
       console.error('加载技能失败:', e);

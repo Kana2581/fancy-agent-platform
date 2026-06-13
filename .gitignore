@@ -46,8 +46,8 @@ dist-ssr
 *.sln
 *.sw?
 
-# Claude Code 本地机器设置（含权限白名单，可能含敏感命令历史）
-.claude/settings.local.json
+# Claude Code 本地设置/钩子（每人习惯不同，不纳入版本库）
+.claude/
 
 # Local release/video preparation assets
 _发布准备/
