@@ -404,7 +404,7 @@ const ChatPage: React.FC = () => {
                 ? (() => {
                     const totalTokens = displayMessages
                       .filter(m => m.type === 'ai' && m.usage_metadata?.total_tokens)
-                      .reduce((acc, m) => acc + ((m.usage_metadata as any)?.total_tokens ?? 0), 0);
+                      .reduce((acc, m) => acc + (m.usage_metadata?.total_tokens ?? 0), 0);
                     return `${selectedAgent?.llm
                       ? `${selectedAgent.llm.provider} - ${selectedAgent.llm.model_name}`
                       : 'GPT-4'} · ${enabledMCPCount} 个工具已启用${totalTokens > 0 ? ` · ${totalTokens} tokens` : ''}`;
@@ -615,7 +615,7 @@ const ChatPage: React.FC = () => {
               <p className="text-sm font-semibold text-gray-700 mb-3">🔧 Agent 想要调用以下工具，是否批准？</p>
               <div className="border-t border-gray-200 dark:border-zinc-800 py-3 space-y-1">
                 {pendingApproval.toolCalls.length > 0 ? (
-                  pendingApproval.toolCalls.map((tc: any, i: number) => (
+                  pendingApproval.toolCalls.map((tc, i) => (
                     <div key={i} className="text-xs font-mono text-gray-600 bg-gray-50 dark:bg-zinc-900 rounded-xl px-3 py-2">
                       <span className="font-semibold text-gray-800">{tc.name}</span>
                       {'args' in tc && (

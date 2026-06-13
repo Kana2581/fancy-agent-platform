@@ -35,6 +35,7 @@ interface AppContextType {
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
+// eslint-disable-next-line react-refresh/only-export-components -- context hook colocated with its provider; dev-only Fast Refresh hint
 export const useAppContext = () => {
   const context = useContext(AppContext);
   if (!context) {
@@ -97,6 +98,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     if (!tokenManager.isAuthenticated()) {
       return;
     }
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- async data fetch on mount; setState runs after await, not synchronously
     refreshAll();
   }, [refreshAll]);
 

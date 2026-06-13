@@ -1,7 +1,7 @@
 /* generated using openapi-typescript-codegen -- do not edit */
 /* istanbul ignore file */
 /* tslint:disable */
-/* eslint-disable */
+ 
 export type schedule_type = 'daily' | 'weekly' | 'monthly';
 export const schedule_type = {
     DAILY: 'daily' as schedule_type,

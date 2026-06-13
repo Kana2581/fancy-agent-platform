@@ -152,7 +152,14 @@ const KGGraphView: React.FC<KGGraphViewProps> = ({ kgNodes, kgEdges }) => {
   const [direction, setDirection] = useState<'LR' | 'TB'>('LR');
   const [searchQuery, setSearchQuery] = useState('');
   const [hiddenTypes, setHiddenTypes] = useState<Set<string>>(new Set());
-  const [jumpToId, setJumpToId] = useState<string | null>(null);
+
+  // Derived: id of the node to auto-jump to when exactly one matches the search.
+  const jumpToId = useMemo<string | null>(() => {
+    const q = searchQuery.toLowerCase().trim();
+    if (!q) return null;
+    const matches = kgNodes.filter(n => n.name.toLowerCase().includes(q));
+    return matches.length === 1 ? String(matches[0].id) : null;
+  }, [searchQuery, kgNodes]);
 
   const allTypes = useMemo(() => Array.from(new Set(kgNodes.map(n => n.type))), [kgNodes]);
 
@@ -179,14 +186,6 @@ const KGGraphView: React.FC<KGGraphViewProps> = ({ kgNodes, kgEdges }) => {
       },
     })));
   }, [searchQuery, setRfNodes]);
-
-  // Auto-jump when exactly one node matches
-  useEffect(() => {
-    const q = searchQuery.toLowerCase().trim();
-    if (!q) { setJumpToId(null); return; }
-    const matches = kgNodes.filter(n => n.name.toLowerCase().includes(q));
-    setJumpToId(matches.length === 1 ? String(matches[0].id) : null);
-  }, [searchQuery, kgNodes]);
 
   const handleRelayout = useCallback(() => {
     const { nodes, edges } = toFlowData(kgNodes, kgEdges, direction, hiddenTypes);
@@ -469,8 +468,9 @@ const ExtractModal: React.FC<ExtractModalProps> = ({ graphId, agents, onClose, o
     try {
       const result = await KnowledgeGraphService.extractFromText(graphId, text.trim(), Number(agentId));
       setPreview(result);
-    } catch (e: any) {
-      setError(e?.body?.detail || '提取失败，请重试');
+    } catch (e) {
+      const err = e as { body?: { detail?: string } };
+      setError(err?.body?.detail || '提取失败，请重试');
     } finally {
       setExtracting(false);
     }
@@ -715,7 +715,7 @@ const KnowledgeGraphPage: React.FC = () => {
     setExporting(true);
     try {
       const text = await KnowledgeGraphService.exportCypher(selectedGraph.id);
-      const safeName = selectedGraph.name.replace(/[^\w\-]+/g, '_') || `graph-${selectedGraph.id}`;
+      const safeName = selectedGraph.name.replace(/[^\w-]+/g, '_') || `graph-${selectedGraph.id}`;
       const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');

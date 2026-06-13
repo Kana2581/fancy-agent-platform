@@ -117,21 +117,23 @@ export const FilePresentCard: React.FC<FilePresentCardProps> = ({ files, title }
  * 检测一段工具消息内容是否是 ws_present 的输出。
  * 输入是字符串（来自 ToolMessage.content）。
  */
+// eslint-disable-next-line react-refresh/only-export-components -- helper colocated with the card it parses for; dev-only Fast Refresh hint
 export function tryParseFilePresent(content: string): {
   files: PresentedFile[];
   title?: string;
 } | null {
   if (!content || typeof content !== 'string') return null;
-  let parsed: any;
+  let parsed: unknown;
   try {
     parsed = JSON.parse(content);
   } catch {
     return null;
   }
   if (!parsed || typeof parsed !== 'object') return null;
-  if (!Array.isArray(parsed.presented_files)) return null;
+  const obj = parsed as { presented_files?: unknown; title?: unknown };
+  if (!Array.isArray(obj.presented_files)) return null;
   return {
-    files: parsed.presented_files as PresentedFile[],
-    title: typeof parsed.title === 'string' ? parsed.title : undefined,
+    files: obj.presented_files as PresentedFile[],
+    title: typeof obj.title === 'string' ? obj.title : undefined,
   };
 }

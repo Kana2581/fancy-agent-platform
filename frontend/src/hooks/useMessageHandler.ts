@@ -14,9 +14,16 @@ export interface SiblingInfo {
   current: number; // 1-based
 }
 
+export interface ToolCall {
+  id?: string;
+  name?: string;
+  args?: Record<string, unknown>;
+  [key: string]: unknown;
+}
+
 export interface PendingApproval {
   messageId: string;
-  toolCalls: any[];
+  toolCalls: ToolCall[];
 }
 
 interface UseMessageHandlerReturn {
@@ -165,9 +172,9 @@ export const useMessageHandler = ({ sessionId }: UseMessageHandlerProps): UseMes
     chunkId: string,
     type: string,
     rawContent: unknown,
-    toolCalls?: any[],
+    toolCalls?: ToolCall[],
     parentId?: string | null,
-    usageMetadata?: any,
+    usageMetadata?: Record<string, unknown> | null,
   ) {
     const content = normalizeContent(rawContent);
 
@@ -333,8 +340,8 @@ async function startChatStream(
     }
 
     await processStream(res);
-  } catch (error: any) {
-    if (error?.name !== 'AbortError') {
+  } catch (error) {
+    if ((error as Error)?.name !== 'AbortError') {
       console.error('Stream error:', error);
     }
   } finally {
@@ -538,8 +545,8 @@ async function startChatStream(
       });
 
       await processStream(res);
-    } catch (error: any) {
-      if (error?.name !== 'AbortError') {
+    } catch (error) {
+      if ((error as Error)?.name !== 'AbortError') {
         console.error('Approve tool stream error:', error);
       }
     } finally {
@@ -633,8 +640,8 @@ async function startChatStream(
           prev.map((m) => (m.id === finalId ? { ...m, name: '__compressed__' } : m))
         );
       }
-    } catch (err: any) {
-      if (err?.name !== 'AbortError') {
+    } catch (err) {
+      if ((err as Error)?.name !== 'AbortError') {
         console.error('压缩失败', err);
       }
     } finally {

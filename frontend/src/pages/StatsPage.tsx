@@ -37,6 +37,7 @@ const StatsPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- loading flag for the data fetch below
     setLoading(true);
     Promise.all([
       StatsService.getTokenSummary(),

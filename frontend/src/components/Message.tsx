@@ -22,8 +22,22 @@ type ContentBlock = {
   annotations?: TextAnnotation[];
 };
 
+type ToolCallData = {
+  id?: string;
+  name?: string;
+  args?: Record<string, unknown>;
+  [key: string]: unknown;
+};
+
+type UsageMetadata = {
+  input_tokens?: number;
+  output_tokens?: number;
+  total_tokens?: number;
+  [key: string]: unknown;
+};
+
 // 工具调用组件
-export const ToolCall: React.FC<{ toolCall: any }> = ({ toolCall }) => {
+export const ToolCall: React.FC<{ toolCall: ToolCallData }> = ({ toolCall }) => {
   const [isExpanded, setIsExpanded] = useState(false);
 
   return (
@@ -109,7 +123,7 @@ export const ToolMessage: React.FC<{ content: string }> = ({ content }) => {
 };
 
 // AI 消息组件（支持 Markdown）
-export const AIMessage: React.FC<{ content: string; toolCalls?: any[] }> = ({ content, toolCalls }) => {
+export const AIMessage: React.FC<{ content: string; toolCalls?: ToolCallData[] }> = ({ content, toolCalls }) => {
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
   return (
     <div className="space-y-2">
@@ -132,7 +146,7 @@ export const AIMessage: React.FC<{ content: string; toolCalls?: any[] }> = ({ co
               const isInline = !(className && match);
               return !isInline && match ? (
                 <SyntaxHighlighter
-                  style={oneDark as any}
+                  style={oneDark as { [key: string]: React.CSSProperties }}
                   language={match[1]}
                   PreTag="div"
                 >
@@ -293,7 +307,7 @@ const AttachedFileCard: React.FC<{ file: SimpleFile }> = ({ file }) => {
 };
 
 // 解析人类消息内容
-export function parseHumanContent(content: string) {
+function parseHumanContent(content: string) {
   let parsedContent: ContentBlock[];
   let isJson = false;
   
@@ -551,8 +565,8 @@ export const MessageBubble: React.FC<{
   name?: string | null;
   content: string;
   files?: SimpleFile[];
-  toolCalls?: any[];
-  usageMetadata?: Record<string, any> | null;
+  toolCalls?: ToolCallData[];
+  usageMetadata?: UsageMetadata | null;
   messageId?: string;
   isEditing?: boolean;
   editingContent?: string;

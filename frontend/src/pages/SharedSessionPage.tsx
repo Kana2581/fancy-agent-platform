@@ -5,16 +5,23 @@ import type { SharedSessionView } from '../api';
 import { SessionSharesService } from '../api';
 import { MessageBubble } from '../components/Message';
 
-const contentToString = (content: any): string => {
+type SharedContentItem = {
+  type?: string;
+  text?: string;
+  image_url?: { url?: string } | string;
+};
+
+const contentToString = (content: unknown): string => {
   if (content == null) return '';
   if (typeof content === 'string') return content;
   if (Array.isArray(content)) {
     return content
-      .map((item: any) => {
-        if (typeof item === 'string') return item;
+      .map((raw): string => {
+        if (typeof raw === 'string') return raw;
+        const item = raw as SharedContentItem;
         if (item?.type === 'text' && typeof item?.text === 'string') return item.text;
         if (item?.type === 'image_url') {
-          const url = item?.image_url?.url ?? item?.image_url;
+          const url = typeof item.image_url === 'string' ? item.image_url : item.image_url?.url;
           return url ? `![image](${url})` : '';
         }
         return '';
@@ -42,10 +49,11 @@ const SharedSessionPage: React.FC = () => {
       try {
         const data = await SessionSharesService.viewShared(slug);
         if (!cancelled) setView(data);
-      } catch (e: any) {
+      } catch (e) {
         console.error(e);
         if (!cancelled) {
-          const status = e?.status ?? e?.response?.status;
+          const err = e as { status?: number; response?: { status?: number } };
+          const status = err?.status ?? err?.response?.status;
           setError(
             status === 410
               ? '该分享链接已失效或已过期。'

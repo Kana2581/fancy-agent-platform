@@ -79,6 +79,7 @@ const Sidebar: React.FC<SidebarProps> = ({
   }, []);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- async data fetch; setState runs after await, not synchronously
     fetchSessions(debouncedQuery, page);
   }, [debouncedQuery, page, refreshSessionsTrigger, fetchSessions]);
 
