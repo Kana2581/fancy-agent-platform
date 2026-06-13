@@ -28,7 +28,7 @@ Specifically, a few pain points come up when trying to use existing chatbots as 
 
 - **Fully transparent agent configuration**: System prompt, bound tools, and call limits are all visible and editable
 - **HTTP API Tool**: One of the core highlights. Most MCP tools are just wrappers around an HTTP endpoint anyway — this project lets you configure any REST API directly as an agent tool, no MCP server needed, just provide a URL and parameters
-- **Bring your own API key**: Connect OpenAI, Anthropic, SiliconFlow, or any OpenAI-compatible provider — no platform subscription required
+- **Bring your own API key**: Native support for OpenAI, Anthropic, Google Gemini, and Ollama (local); any OpenAI-compatible endpoint (SiliconFlow, Alibaba Cloud, DeepSeek, …) connects via a custom `base_url` — no platform subscription required
 - **Local or public deployment**: Run locally with zero-dependency SQLite, or deploy to a server with Docker Compose
 - **Extension features**: Webhook triggers (requires public IP), email notifications, and scheduled tasks for lightweight automation
 
@@ -184,7 +184,9 @@ bash deploy.sh
 Once the service is running, here's how to configure your first agent:
 
 1. **Register / Log in** — Open the homepage, register an account, and log in.
-2. **Configure an LLM** — On the Models page, add an LLM with its `provider`, `model_name`, `api_key`, and a custom `base_url` (any OpenAI-compatible endpoint works — OpenAI, Anthropic, SiliconFlow, etc.).
+2. **Configure an LLM** — On the Models page, add an LLM: pick a provider (OpenAI / Anthropic / Google / Ollama), then fill in `model_name`, `api_key`, and an optional `base_url`. OpenAI-compatible services (SiliconFlow, Alibaba Cloud, DeepSeek, …) connect by choosing `OpenAI` and overriding `base_url`; local Ollama uses the `Ollama` provider with `base_url` pointing at `http://<host>:11434` (no API key needed).
+
+   > The model layer is built on LangChain's `init_chat_model`, so message formats are normalized across providers automatically — the rest of the app never deals with per-provider differences. To add another provider: install the matching `langchain-xxx` integration on the backend (`uv`/`pip`), then expose the option in the frontend Models form's provider dropdown (`frontend/src/components/LLMForm.tsx`).
 3. **(Optional) Set up tools** — When you need external capabilities, configure tools first:
    - **MCP** — Paste a Claude Desktop-format MCP config to import
    - **HTTP API Tool** — Wrap any REST endpoint into a tool via the wizard (URL, method, params, response extraction)

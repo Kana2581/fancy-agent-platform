@@ -28,7 +28,7 @@
 
 - **完全透明的 agent 配置**：系统提示词、绑定的工具、调用上限一目了然，自己写自己改
 - **HTTP API 工具**：这是本项目的核心亮点之一。大部分 MCP 工具本质上只是对某个接口的封装，本项目直接支持将任意 HTTP API 配置成工具供 AI 调用，不需要写 MCP server，配个 URL 和参数就能用
-- **用自己的 API Key**：接 OpenAI、Anthropic、硅基流动等任意支持 OpenAI 兼容格式的提供商，不受平台订阅限制
+- **用自己的 API Key**：原生支持 OpenAI、Anthropic、Google Gemini、Ollama（本地）四种协议；硅基流动、阿里云、DeepSeek 等任意 OpenAI 兼容接口可通过自定义 `base_url` 接入，不受平台订阅限制
 - **本地自用或对外发布**：SQLite 零依赖跑本地，Docker Compose 一键部署到服务器对外提供服务
 - **扩展能力**：Webhook 触发（需公网 IP）、邮件提醒、定时任务，适合做一些轻量自动化
 
@@ -184,7 +184,9 @@ bash deploy.sh
 服务跑起来后，按下面的流程配置出你的第一个 Agent：
 
 1. **注册 / 登录** — 打开首页注册账号，登录后进入主界面。
-2. **配置 LLM 模型** — 在「模型」页新增一个 LLM，填入 `provider`、`model_name`、`api_key`，以及自定义的 `base_url`（任意 OpenAI 兼容接口都支持，如 OpenAI、Anthropic、硅基流动）。
+2. **配置 LLM 模型** — 在「模型」页新增一个 LLM，选择提供商（OpenAI / Anthropic / Google / Ollama），填入 `model_name`、`api_key`，以及可选的 `base_url`。硅基流动、阿里云、DeepSeek 等 OpenAI 兼容服务选 `OpenAI` 并改写 `base_url` 即可接入；本地 Ollama 选 `Ollama`、把 `base_url` 指向 `http://<host>:11434`（无需 API Key）。
+
+   > 模型层基于 LangChain 的 `init_chat_model` 封装，不同提供商的消息格式会自动统一，业务层无需关心差异。要新增其他提供商：后端用 `uv`/`pip` 装上对应的 `langchain-xxx` 集成包，再在前端「模型」表单的提供商下拉（`frontend/src/components/LLMForm.tsx`）里放出该选项即可。
 3. **（可选）准备工具** — 需要外部能力时，先配置工具：
    - **MCP** — 粘贴 Claude Desktop 格式的 MCP 配置即可导入
    - **HTTP API 工具** — 通过向导把任意 REST 接口封装成工具（URL、方法、参数、响应提取四步）

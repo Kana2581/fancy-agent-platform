@@ -65,8 +65,7 @@ const LLMForm: React.FC<LLMFormProps> = ({
             { value: 'OpenAI', label: 'OpenAI' },
             { value: 'Anthropic', label: 'Anthropic' },
             { value: 'Google', label: 'Google' },
-            { value: 'Azure', label: 'Azure' },
-            { value: 'Custom', label: 'Custom' },
+            { value: 'Ollama', label: 'Ollama' },
           ]}
           className="w-full px-4 py-3 bg-white dark:bg-zinc-800 border border-gray-300 dark:border-zinc-700 rounded-2xl focus:ring-1 focus:ring-gray-300 dark:focus:ring-zinc-600 focus:border-gray-500 dark:focus:border-zinc-400 outline-none transition-all text-gray-800 dark:text-white"
         />
