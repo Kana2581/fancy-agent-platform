@@ -362,3 +362,7 @@ fancy_agent/
 | [项目结构说明.md](docs/项目结构说明.md) | 项目目录结构详解 |
 | [stream-interrupt-persist-bug.md](docs/stream-interrupt-persist-bug.md) | 流式中断持久化问题的复盘记录 |
 | [webhook-smoke-test.md](docs/webhook-smoke-test.md) | Webhook 冒烟测试记录 |
+
+## 演示视频
+
+- Bilibili: [我做了一个全栈 AI Agent 平台：支持 MCP、HTTP API 工具、图像工作台](https://www.bilibili.com/video/BV1MVJn69EPP/?share_source=copy_web&vd_source=f74e0c665f4fb75caa2057a3e0d75600)
