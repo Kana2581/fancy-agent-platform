@@ -48,3 +48,7 @@ dist-ssr
 
 # Claude Code 本地机器设置（含权限白名单，可能含敏感命令历史）
 .claude/settings.local.json
+
+# Local release/video preparation assets
+_发布准备/
+_video_work/

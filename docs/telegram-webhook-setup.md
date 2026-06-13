@@ -2,6 +2,8 @@
 
 这份文档用于说明如何把 Telegram 机器人接到 Fancy Agent 的入站 Webhook。
 
+> 验证状态：受公网 HTTPS 等部署条件限制，作者本人尚未完成 Telegram 端到端实测；本文档基于 Telegram 官方 webhook 机制和当前代码实现整理，适合作为接入说明与排障起点。
+
 ## 先说结论
 
 Telegram 接入和钉钉不同，没有「拿 AppSecret」这一步，最容易卡住的点是：

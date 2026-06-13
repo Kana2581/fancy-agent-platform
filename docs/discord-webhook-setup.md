@@ -2,6 +2,8 @@
 
 这份文档用于说明如何把 Discord 应用的斜杠命令（Slash Command）接到 Fancy Agent。
 
+> 验证状态：受公网 HTTPS 等部署条件限制，作者本人尚未完成 Discord 端到端实测；本文档基于 Discord Interactions 官方流程和当前代码实现整理，适合作为接入说明与排障起点。
+
 ## 先说结论
 
 Discord 接入和钉钉、Telegram 都不一样，它走的是 **Interactions（交互）** 机制，校验方式是 **Ed25519 签名**，不是 HMAC。最容易卡住的点是：

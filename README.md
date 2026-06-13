@@ -46,7 +46,7 @@
 - **邮件 Agent** — 轮询邮箱，将邮件路由到指定 Agent 处理
 - **Prompt 模板** — 管理可复用的提示词片段，支持分类与一键复制
 - **Token 用量统计** — 查看总量、按 Agent 分组及最近 30 天每日趋势
-- **JWT 鉴权** — Access Token (365天) + httpOnly Refresh Token (3650天)
+- **JWT 鉴权** — Access Token
 
 ## 内置工具
 
@@ -190,6 +190,11 @@ bash deploy.sh
 
 平台支持把 Agent 接到外部入站 Webhook，被外部事件或聊天机器人触发。入站 Webhook 端点是**公开的（无需登录）**，按通道各自做签名 / 令牌校验；**在 Webhook 上下文中 Human-in-the-loop 审批会自动跳过**（无法人工介入，直接执行）。所有通道都需要服务有**公网可访问地址**。
 
+> 当前验证状态：
+> - 钉钉：已在真实环境中验证通过
+> - Telegram：受公网 HTTPS 等条件限制，代码已实现并补充了接入文档，但作者本人未完成实际联调验证
+> - Discord：受公网 HTTPS 等条件限制，代码已实现并补充了接入文档，但作者本人未完成实际联调验证
+
 | 通道 | 端点 | 必填凭证 | 校验方式 |
 |---|---|---|---|
 | 通用 HTTP | `/api/v1/webhooks/{slug}` | 自动生成 secret | HMAC-SHA256（`X-Signature` 头） |
@@ -212,6 +217,8 @@ bash deploy.sh
 - 钉钉：[docs/dingtalk-webhook-setup.md](docs/dingtalk-webhook-setup.md)
 - Telegram：[docs/telegram-webhook-setup.md](docs/telegram-webhook-setup.md)
 - Discord：[docs/discord-webhook-setup.md](docs/discord-webhook-setup.md)
+
+其中钉钉文档对应的是已实测跑通的链路；Telegram 与 Discord 文档目前属于基于官方接入流程和代码实现整理的操作说明，尚未在作者当前部署条件下完成端到端实测。
 
 ## 环境变量
 
