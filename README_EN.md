@@ -293,18 +293,18 @@ from app.models.foo import Foo  # noqa: F401
 
 ## Development Guide
 
-### Sync API types
+### Commit Workflow
 
-After modifying backend schemas, regenerate frontend types:
+The `master` branch is protected and cannot be pushed to directly. Use a feature branch instead:
 
 ```bash
-# 1. Make sure the backend is running and export openapi.json
-# 2. Run the codegen command
-cd frontend
-npx openapi-typescript-codegen --input ./openapi.json --output src/api --client axios
+git switch -c your-branch-name
+git add .
+git commit -m "type: short description"
+git push -u origin your-branch-name
 ```
 
-> If the backend can't start (e.g. no database available), manually add type files under `src/api/models/`, add service classes under `src/api/services/`, and export them from `src/api/index.ts`.
+Then open a GitHub pull request and merge the branch back into `master`.
 
 ### Backend architecture
 

@@ -300,18 +300,18 @@ from app.models.foo import Foo  # noqa: F401
 
 ## 开发指南
 
-### 同步 API 类型
+### 提交规范
 
-修改后端 Schema 后，重新生成前端类型：
+当前仓库的 `master` 分支已开启保护，不能直接推送。提交代码请使用以下流程：
 
 ```bash
-# 1. 确保后端正在运行，导出 openapi.json
-# 2. 执行生成命令
-cd frontend
-npx openapi-typescript-codegen --input ./openapi.json --output src/api --client axios
+git switch -c your-branch-name
+git add .
+git commit -m "type: short description"
+git push -u origin your-branch-name
 ```
 
-> 若后端无法启动（如无数据库），可手动在 `src/api/models/` 下添加类型文件，在 `src/api/services/` 下添加 Service 类，并在 `src/api/index.ts` 中导出。
+然后在 GitHub 上创建 PR，将分支合并回 `master`。
 
 ### 后端架构
 

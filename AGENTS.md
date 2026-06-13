@@ -17,13 +17,12 @@
   - `cd frontend && npm run lint` — run ESLint.
 - Full stack (Docker):  
   `cd backend && uv export --no-hashes --format requirements-txt -o requirements.txt` then `docker compose up --build`.
-- Regenerate frontend API client after schema updates:  
-  `cd frontend && npx openapi-typescript-codegen --input ./openapi.json --output src/api --client axios`.
+- `frontend/src/api/` contains frontend API client code originally generated from the OpenAPI schema; manual edits are acceptable when that is the most practical way to keep the client in sync.
 
 ## Coding Style & Naming Conventions
 - Python: 4-space indentation, `snake_case` modules/functions, explicit service/mapper naming (e.g., `agent_service.py`, `agent_mapper.py`).
 - TypeScript/React: follow existing style (2-space indentation, single quotes, semicolons). Use `PascalCase` for components/pages and `camelCase` for hooks/utils.
-- Keep generated files under `frontend/src/api/` generated, not hand-edited unless regeneration is impossible.
+- `frontend/src/api/` started as generated client code, but in this repository it may be maintained manually when needed; keep changes consistent and intentional.
 
 ## Testing Guidelines
 - There is no end-to-end test suite yet; backend validation is script-based (`backend/test.py`, `backend/test_stream.py`, etc.).
