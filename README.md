@@ -135,27 +135,23 @@ npm run dev
 **首次部署**
 
 ```bash
-# 1. 配置后端环境变量
-cp backend/.env.docker.example backend/.env
+# 1. 复制并填写集中配置（唯一需要手动维护的文件）
+cp deploy.config.example deploy.config
 ```
 
-打开 `backend/.env`，**至少关注以下两项**：
+打开 `deploy.config`，**至少填写以下三项**，其余保持默认即可：
 
 | 变量 | 说明 |
 |---|---|
-| `SECRET_KEY` | 有默认值（`super-secret-key`），不改也能启动；但生产环境**强烈建议**改为任意随机字符串（用于 JWT 签名），否则所有用户 token 不安全 |
-| `OSS_URL` | 改为服务器实际地址，如 `http://your-server-ip/files`，用于上传文件的访问链接 |
+| `PUBLIC_HOST` | 服务器实际地址，如 `http://your-server-ip`，无结尾斜杠 |
+| `DB_PASSWORD` | MySQL root 密码，自定义任意字符串即可 |
+| `SECRET_KEY` | JWT 签名密钥，建议随机字符串（`openssl rand -hex 32`） |
 
 ```bash
-# 2. 配置前端 API 地址（必须在构建前修改）
-# 编辑 frontend/.env.production，将 VITE_API_BASE 改为实际服务器地址：
-# VITE_API_BASE=http://your-server-ip
-```
+# 2. 运行配置渲染脚本（自动生成 backend/.env 等配置文件）
+bash configure.sh
 
-> **为什么要改**：前端打包时会将 API 地址编译进静态文件，Nginx 直接挂载 `frontend/dist/` 目录，不会在容器内重新构建。地址写错了访问页面会报网络错误。
-
-```bash
-# 3. 构建前端静态文件（必须在 docker compose 之前完成）
+# 3. 构建前端静态文件
 cd frontend && npm install && npm run build && cd ..
 
 # 4. （依赖有变更时）重新生成 requirements.txt
@@ -169,13 +165,15 @@ docker compose up --build -d
 
 > **注意**：首次启动会拉取 MySQL 8.0 / Python 3.12-slim 等基础镜像，国内服务器建议提前配置 Docker 镜像加速（Docker Desktop → Settings → Docker Engine 中添加 `registry-mirrors`）。
 
+> **前端不需要改任何配置**：前端生产构建使用相对路径访问 API，nginx 保证同源，换域名/IP 不需要重新构建前端。
+
 **后续更新**
 
 ```bash
 bash deploy.sh
 ```
 
-`deploy.sh` 自动完成：拉取最新代码 → 覆盖 `.env`（从 `backend/.env.prd`）→ 构建前端 → 重启容器。服务器上需提前创建 `backend/.env.prd`（格式同 `.env.docker.example`）。
+`deploy.sh` 自动完成：拉取最新代码 → 调用 `configure.sh` 渲染配置 → 构建前端 → 重启容器。`deploy.config` 已被 `.gitignore` 忽略，`git reset` 不会清除它，一次配置后长期有效。换服务器/域名只需修改 `deploy.config` 里的 `PUBLIC_HOST`。
 
 > `uv export` 会自动为 Windows 专属包（如 `pywin32`）添加 `; sys_platform == "win32"` 标记，确保 Linux 镜像构建时跳过它们。
 
@@ -250,7 +248,7 @@ bash deploy.sh
 
 | 变量 | 说明 |
 |---|---|
-| `VITE_API_BASE` | 后端 API 地址，如 `http://localhost:8000` |
+| `VITE_API_BASE` | 后端 API 地址。本地开发（`.env.development`）填 `http://localhost:8000`；生产构建（`.env.production`）留空，前端走相对路径，nginx 同源路由 |
 
 ## 测试
 

@@ -13,13 +13,14 @@ log "拉取最新代码..."
 git fetch origin
 git reset --hard origin/main
 
-# ── 2. 覆盖环境变量 ──────────────────────────────────────────────────────────
-log "覆盖 .env..."
-if [ ! -f backend/.env.prd ]; then
-    echo "错误: backend/.env.prd 不存在，终止部署" >&2
+# ── 2. 从集中配置渲染各环境变量文件 ──────────────────────────────────────────
+log "渲染配置（deploy.config → 前后端 .env）..."
+if [ ! -f deploy.config ]; then
+    echo "错误: deploy.config 不存在，终止部署" >&2
+    echo "请先复制模板并填写：cp deploy.config.example deploy.config" >&2
     exit 1
 fi
-cp backend/.env.prd backend/.env
+bash configure.sh
 
 # ── 3. 前端构建 ──────────────────────────────────────────────────────────────
 log "安装前端依赖并构建..."

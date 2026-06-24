@@ -1,0 +1,40 @@
+# ── 部署集中配置（唯一事实来源）─────────────────────────────────────────────
+# 用法：复制本文件为 deploy.config 并填写，然后运行 bash deploy.sh
+#   cp deploy.config.example deploy.config
+# deploy.config 含密钥，已被 .gitignore 忽略，不会提交，也不会被 git reset 清除。
+# 换服务器/域名时，通常只需改 PUBLIC_HOST 一行。
+
+# 公网访问地址：scheme + host[:port]，结尾不要带斜杠。
+# 例：http://example.com 或 http://1.2.3.4 或 https://agent.example.com
+PUBLIC_HOST=http://your-domain-or-ip
+
+# ── 数据库 ───────────────────────────────────────────────────────────────────
+# 用 docker-compose 内置 MySQL 时 DB_HOST 保持 mysql_db（compose 服务名）；
+# 用外部数据库时填外部主机 IP/域名。
+DB_HOST=mysql_db
+DB_NAME=fancy_agent
+DB_USER=root
+DB_PASSWORD=change-me
+
+# ── 应用密钥 ─────────────────────────────────────────────────────────────────
+# SECRET_KEY：JWT 签名密钥，建议随机串。生成：openssl rand -hex 32
+SECRET_KEY=change-this-to-a-random-secret-key
+# APP_ENCRYPTION_KEY：敏感字段落库加密密钥，可选；留空则由 SECRET_KEY 派生。
+APP_ENCRYPTION_KEY=
+
+# ── 邮件 Agent（可选，默认关闭）──────────────────────────────────────────────
+EMAIL_ENABLED=false
+EMAIL_PROVIDER=
+EMAIL_ADDRESS=
+EMAIL_USERNAME=
+EMAIL_PASSWORD=
+EMAIL_CHECK_INTERVAL=120
+
+# ── 搜索服务 ─────────────────────────────────────────────────────────────────
+# duckduckgo（默认，无需 key）或 tavily（需 TAVILY_API_KEY）
+SEARCH_PROVIDER=duckduckgo
+TAVILY_API_KEY=
+
+# ── Agent 执行限制 ───────────────────────────────────────────────────────────
+AGENT_TOOL_CALL_LIMIT=15
+AGENT_MODEL_CALL_LIMIT=15

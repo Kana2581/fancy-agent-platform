@@ -135,27 +135,23 @@ All services containerized (MySQL + FastAPI + code sandbox + Nginx). Recommended
 **First deployment**
 
 ```bash
-# 1. Configure backend environment variables
-cp backend/.env.docker.example backend/.env
+# 1. Copy and fill in the central config (the only file you need to maintain)
+cp deploy.config.example deploy.config
 ```
 
-Open `backend/.env` and **review these two values**:
+Open `deploy.config` and **set at least these three values** — everything else can stay as the default:
 
 | Variable | Description |
 |---|---|
-| `SECRET_KEY` | Has a default (`super-secret-key`), so the app boots without it; for production, **strongly recommended** to replace with any random string (used for JWT signing) — otherwise all user tokens are insecure |
-| `OSS_URL` | Set to your server's actual address, e.g. `http://your-server-ip/files` — used as the base URL for uploaded file links |
+| `PUBLIC_HOST` | Your server's address, e.g. `http://your-server-ip` — no trailing slash |
+| `DB_PASSWORD` | MySQL root password — any string you choose |
+| `SECRET_KEY` | JWT signing key — use a random string (`openssl rand -hex 32`) |
 
 ```bash
-# 2. Set the frontend API address (must be done before building)
-# Edit frontend/.env.production and set VITE_API_BASE to your server address:
-# VITE_API_BASE=http://your-server-ip
-```
+# 2. Run the config renderer (generates backend/.env and other config files)
+bash configure.sh
 
-> **Why this matters**: The API address is compiled into the static files at build time. Nginx mounts `frontend/dist/` directly from the host — it does not rebuild inside the container. A wrong address means every API call will fail in the browser.
-
-```bash
-# 3. Build the frontend (must happen before docker compose)
+# 3. Build the frontend
 cd frontend && npm install && npm run build && cd ..
 
 # 4. (Only when dependencies change) Regenerate requirements.txt
@@ -169,13 +165,15 @@ Once started, visit `http://your-server-ip`, register an account, and you're rea
 
 > **Note**: The first run pulls base images (MySQL 8.0, Python 3.12-slim, etc.). If you're on a server in mainland China, configure Docker mirror registries first (Docker Desktop → Settings → Docker Engine → add `registry-mirrors`).
 
+> **No frontend config needed**: The production frontend uses relative API paths — nginx handles routing on the same origin. Changing domain or IP does not require rebuilding the frontend.
+
 **Subsequent updates**
 
 ```bash
 bash deploy.sh
 ```
 
-`deploy.sh` handles: pull latest code → overwrite `.env` (from `backend/.env.prd`) → build frontend → restart containers. Create `backend/.env.prd` on the server beforehand (same format as `.env.docker.example`).
+`deploy.sh` handles: pull latest code → run `configure.sh` to render config → build frontend → restart containers. `deploy.config` is gitignored so `git reset` never clears it — configure once and it persists. To change domain or IP, just update `PUBLIC_HOST` in `deploy.config`.
 
 > `uv export` automatically adds `; sys_platform == "win32"` markers for Windows-only packages (e.g. `pywin32`), so the Linux Docker build skips them cleanly.
 
@@ -243,7 +241,7 @@ Frontend reads `frontend/.env.development` / `frontend/.env.production`:
 
 | Variable | Description |
 |---|---|
-| `VITE_API_BASE` | Backend API address, e.g. `http://localhost:8000` |
+| `VITE_API_BASE` | Backend API address. For local dev (`.env.development`): `http://localhost:8000`. For production (`.env.production`): leave empty — the frontend uses relative paths and nginx handles routing on the same origin |
 
 ## Testing
 
