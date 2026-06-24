@@ -63,10 +63,11 @@ cp deploy.config.example deploy.config   # 首次：填写 PUBLIC_HOST / DB_PASS
 bash deploy.sh                           # 拉取 origin/main → configure.sh 渲染配置 → 构建前端 → 重启容器
 ```
 
-`configure.sh` 由 `deploy.sh` 在 `git reset --hard` 之后调用，从 `deploy.config` 渲染出三份文件（均为生成物，勿手改）：
-- `frontend/.env.production` — `VITE_API_BASE`（域名，构建期烧入）
+`configure.sh` 由 `deploy.sh` 在 `git reset --hard` 之后调用，从 `deploy.config` 渲染出两份文件（均为生成物，勿手改）：
 - `backend/.env` — `DATABASE_URL`（密码自动 URL 编码）、`OSS_URL`、`CORS_ORIGINS`、`SECRET_KEY`、邮件/搜索等
 - 仓库根 `.env` — `DB_PASSWORD`/`DB_NAME`，供 `docker-compose.yml` 变量插值（MySQL 密码不再硬编码）
+
+前端生产构建使用空 `VITE_API_BASE`（相对路径），无需写入域名；换域名/IP 不需要重新构建前端。
 
 旧的 `backend/.env.prd` 流程已废弃。
 
