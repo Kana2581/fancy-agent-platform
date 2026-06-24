@@ -121,6 +121,11 @@ class Settings:
         # 跳过日志的路径
         self.log_skip_paths: List[str] = ["/health", "/metrics", "/docs", "/openapi.json"]
 
+        # MLflow 可观测性（默认关闭；启用需先 uv sync --extra observability）
+        self.MLFLOW_ENABLED: bool = os.getenv("MLFLOW_ENABLED", "false").lower() == "true"
+        self.MLFLOW_TRACKING_URI: str = os.getenv("MLFLOW_TRACKING_URI", "")
+        self.MLFLOW_EXPERIMENT_NAME: str = os.getenv("MLFLOW_EXPERIMENT_NAME", "fancy_agent")
+
         # CORS 配置（逗号分隔）
         cors_origins_raw = os.getenv(
             "CORS_ORIGINS",
