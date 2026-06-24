@@ -56,9 +56,19 @@ Then: `docker compose up --build`
 
 ### Production Deploy
 
+部署配置集中在仓库根的 **`deploy.config`**（从 `deploy.config.example` 复制，已 gitignore，含密钥，`git reset --hard` 不会清除）。换服务器/域名通常只改 `PUBLIC_HOST` 一行。
+
 ```bash
-bash deploy.sh   # pulls origin/main, copies backend/.env.prd → backend/.env, builds frontend, restarts containers
+cp deploy.config.example deploy.config   # 首次：填写 PUBLIC_HOST / DB_PASSWORD / SECRET_KEY 等
+bash deploy.sh                           # 拉取 origin/main → configure.sh 渲染配置 → 构建前端 → 重启容器
 ```
+
+`configure.sh` 由 `deploy.sh` 在 `git reset --hard` 之后调用，从 `deploy.config` 渲染出三份文件（均为生成物，勿手改）：
+- `frontend/.env.production` — `VITE_API_BASE`（域名，构建期烧入）
+- `backend/.env` — `DATABASE_URL`（密码自动 URL 编码）、`OSS_URL`、`CORS_ORIGINS`、`SECRET_KEY`、邮件/搜索等
+- 仓库根 `.env` — `DB_PASSWORD`/`DB_NAME`，供 `docker-compose.yml` 变量插值（MySQL 密码不再硬编码）
+
+旧的 `backend/.env.prd` 流程已废弃。
 
 ## Commit Conventions
 

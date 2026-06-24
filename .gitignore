@@ -13,6 +13,9 @@ wheels/
 .env
 .env.prd
 
+# 部署集中配置（含密钥，由 deploy.config.example 复制而来）
+deploy.config
+
 # Plaintext secret backups (e.g. api_key migration rollback) — never commit
 *_plaintext_backup.sql
 
