@@ -34,25 +34,22 @@ def setup_mlflow(tracking_uri: str, experiment_name: str) -> bool:
     if tracking_uri:
         m.set_tracking_uri(tracking_uri)
     m.set_experiment(experiment_name)
+    m.config.enable_async_logging()
     m.langchain.autolog()
     return True
 
 
-def start_chat_run(run_name: str, params: dict) -> Any:
-    """Open an MLflow run for one chat request. Returns the run object or None."""
+def chat_tracing_context(session_id: str, user_id: str) -> Any:
+    """Return a context manager that tags all MLflow traces with session_id and user_id.
+
+    Uses mlflow.tracing.context() — the correct API for autolog apps.
+    Falls back to a no-op if mlflow is not installed or the API is unavailable.
+    """
+    from contextlib import nullcontext
     m = _get_mlflow()
     if m is None:
-        return None
-    run = m.start_run(run_name=run_name)
-    m.log_params(params)
-    return run
-
-
-def end_chat_run(run: Any, metrics: dict | None = None) -> None:
-    """Close a chat run and optionally log final metrics."""
-    m = _get_mlflow()
-    if m is None or run is None:
-        return
-    if metrics:
-        m.log_metrics(metrics)
-    m.end_run()
+        return nullcontext()
+    try:
+        return m.tracing.context(session_id=session_id, user=user_id)
+    except (AttributeError, TypeError):
+        return nullcontext()

@@ -35,7 +35,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-observability = ["mlflow>=2.14.0"]
+observability = ["mlflow>=2.16.0", "pymysql>=1.1.0"]
 
 [dependency-groups]
 dev = [
