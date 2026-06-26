@@ -57,7 +57,10 @@ async def lifespan(app: FastAPI):
     if settings.MLFLOW_ENABLED:
         from app.utils.mlflow_tracer import setup_mlflow
         active = setup_mlflow(settings.MLFLOW_TRACKING_URI, settings.MLFLOW_EXPERIMENT_NAME)
-        logger.info(f"MLflow tracing {'enabled, experiment={settings.MLFLOW_EXPERIMENT_NAME}' if active else 'skipped (mlflow not installed)'}")
+        if active:
+            logger.info(f"MLflow tracing enabled, experiment={settings.MLFLOW_EXPERIMENT_NAME}")
+        else:
+            logger.info("MLflow tracing skipped (mlflow not installed)")
 
     await init_db()
 

@@ -12,6 +12,10 @@ from __future__ import annotations
 
 from typing import Any
 
+from app.core.logging_config import get_logger
+
+logger = get_logger(__name__)
+
 _mlflow: Any = None  # None = uninitialised; False = import failed
 
 
@@ -31,12 +35,19 @@ def setup_mlflow(tracking_uri: str, experiment_name: str) -> bool:
     m = _get_mlflow()
     if m is None:
         return False
-    if tracking_uri:
-        m.set_tracking_uri(tracking_uri)
-    m.set_experiment(experiment_name)
-    m.config.enable_async_logging()
-    m.langchain.autolog()
-    return True
+    # Observability is optional and must never take down the app: a bad/unreachable
+    # MLFLOW_TRACKING_URI (set_experiment makes a network call) would otherwise crash
+    # startup. Degrade to disabled instead.
+    try:
+        if tracking_uri:
+            m.set_tracking_uri(tracking_uri)
+        m.set_experiment(experiment_name)
+        m.config.enable_async_logging()
+        m.langchain.autolog()
+        return True
+    except Exception as e:  # noqa: BLE001 — never let optional tracing break startup
+        logger.warning(f"MLflow setup failed, tracing disabled: {e}")
+        return False
 
 
 def chat_tracing_context(session_id: str, user_id: str) -> Any:
