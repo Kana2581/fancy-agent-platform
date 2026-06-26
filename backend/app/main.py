@@ -53,6 +53,15 @@ async def lifespan(app: FastAPI):
     )
     logger = get_logger(__name__)
     logger.info(f"应用启动 - 环境: {settings.app_env}")
+
+    if settings.MLFLOW_ENABLED:
+        from app.utils.mlflow_tracer import setup_mlflow
+        active = setup_mlflow(settings.MLFLOW_TRACKING_URI, settings.MLFLOW_EXPERIMENT_NAME)
+        if active:
+            logger.info(f"MLflow tracing enabled, experiment={settings.MLFLOW_EXPERIMENT_NAME}")
+        else:
+            logger.info("MLflow tracing skipped (mlflow not installed)")
+
     await init_db()
 
     # 启动时幂等载入 system skills 种子（找不到文件就跳过）

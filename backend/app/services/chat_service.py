@@ -11,6 +11,9 @@ from app.mappers.chat_message_mapper import ChatMessageMapper
 from app.models.chat_message import ChatMessage
 from app.utils.langchain.message_processor import MessageProcessor, MessageConverter
 from app.core.logging_config import get_logger
+from contextlib import nullcontext
+from app.core.config import settings
+from app.utils.mlflow_tracer import chat_tracing_context
 logger=get_logger(__name__)
 class ChatService:
     """
@@ -59,6 +62,12 @@ class ChatService:
             leaf_message_id: str,
     ):
 
+        _trace_ctx = (
+            chat_tracing_context(session_id, str(user_id))
+            if settings.MLFLOW_ENABLED
+            else nullcontext()
+        )
+
         parent_id = leaf_message_id
         now_id = None
 
@@ -84,61 +93,62 @@ class ChatService:
 
 
         try:
-            async for update_type, chunk in agent.astream(
-                    input={"messages": messages},
-                    stream_mode=["messages", "updates"],
-            ):
+            with _trace_ctx:
+                async for update_type, chunk in agent.astream(
+                        input={"messages": messages},
+                        stream_mode=["messages", "updates"],
+                ):
 
-                # =====================
-                # messages
-                # =====================
-                if update_type == "messages":
-                    msg, meta = chunk
+                    # =====================
+                    # messages
+                    # =====================
+                    if update_type == "messages":
+                        msg, meta = chunk
 
-                    if not isinstance(msg, ToolMessage) and msg.id != "__remove_all__":
-                        # 当检测到新消息 ID 时（上一条已结束、进入下一条），
-                        # 及时更新 parent_id，避免 AIMessageChunk 携带错误的父节点。
+                        if not isinstance(msg, ToolMessage) and msg.id != "__remove_all__":
+                            # 当检测到新消息 ID 时（上一条已结束、进入下一条），
+                            # 及时更新 parent_id，避免 AIMessageChunk 携带错误的父节点。
 
-                        if now_id is None:
-                            now_id = msg.id
-                        elif now_id != msg.id:
-                            parent_id = now_id
-                            now_id = msg.id
+                            if now_id is None:
+                                now_id = msg.id
+                            elif now_id != msg.id:
+                                parent_id = now_id
+                                now_id = msg.id
 
-                        if isinstance(msg, AIMessageChunk) and msg.id:
-                            chunk_buffer.setdefault(msg.id, []).append(msg)
+                            if isinstance(msg, AIMessageChunk) and msg.id:
+                                chunk_buffer.setdefault(msg.id, []).append(msg)
 
-                        yield msg, parent_id
+                            yield msg, parent_id
 
-                # =====================
-                # updates
-                # =====================
-                elif update_type == "updates":
+                    # =====================
+                    # updates
+                    # =====================
+                    elif update_type == "updates":
 
-                    if "tools" in chunk:
-                        res = chunk["tools"]["messages"][-1]
-                        update_parent(res)
-                        processor.add(res)
-                        yield res, parent_id
+                        if "tools" in chunk:
+                            res = chunk["tools"]["messages"][-1]
+                            update_parent(res)
+                            processor.add(res)
+                            yield res, parent_id
 
-                    elif "model" in chunk:
-                        res = chunk["model"]["messages"][-1]
-                        update_parent(res)
-                        # 模型完整产出，对应 chunk 缓存作废
-                        if getattr(res, "id", None):
-                            chunk_buffer.pop(res.id, None)
-                        processor.add(res)
-                        logger.info(f"{res}")
-                        yield res, parent_id
+                        elif "model" in chunk:
+                            res = chunk["model"]["messages"][-1]
+                            update_parent(res)
+                            # 模型完整产出，对应 chunk 缓存作废
+                            if getattr(res, "id", None):
+                                chunk_buffer.pop(res.id, None)
+                            processor.add(res)
+                            logger.info(f"{res}")
+                            yield res, parent_id
 
-                    elif "__interrupt__" in chunk:
-                        # Human-in-the-loop：立刻持久化已产出消息，确保 router 随后写
-                        # MessageApproval、以及客户端调用 /approve-tool 时 AI 消息已经落库。
-                        await self._persist(processor)
-                        processor._messages.clear()
-                        chunk_buffer.clear()  # 完整产出的 AI 消息对应的 chunk 不再需要
-                        yield None, "__interrupt__"
-                        return
+                        elif "__interrupt__" in chunk:
+                            # Human-in-the-loop：立刻持久化已产出消息，确保 router 随后写
+                            # MessageApproval、以及客户端调用 /approve-tool 时 AI 消息已经落库。
+                            await self._persist(processor)
+                            processor._messages.clear()
+                            chunk_buffer.clear()  # 完整产出的 AI 消息对应的 chunk 不再需要
+                            yield None, "__interrupt__"
+                            return
         finally:
             # 兜底路径：正常跑完 / 客户端 abort（CancelledError/GeneratorExit）。
             # tool-approval interrupt 已在上面提前 persist+clear，这里 processor 为空、buffer 也被清空，无副作用。
