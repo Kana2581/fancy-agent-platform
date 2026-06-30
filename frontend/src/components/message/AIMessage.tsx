@@ -6,6 +6,15 @@ import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
 import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism'
 import type { ToolCallData } from './types'
 
+function getToolCallKey(toolCall: ToolCallData, idx: number): string {
+  if (typeof toolCall.id === 'string' && toolCall.id) return toolCall.id
+
+  const name = typeof toolCall.name === 'string' && toolCall.name ? toolCall.name : 'tool-call'
+  const args =
+    toolCall.args && typeof toolCall.args === 'object' ? JSON.stringify(toolCall.args) : ''
+  return `${name}:${idx}:${args}`
+}
+
 const ToolCall: React.FC<{ toolCall: ToolCallData }> = ({ toolCall }) => {
   const [isExpanded, setIsExpanded] = useState(false)
 
@@ -164,7 +173,7 @@ export const AIMessage: React.FC<{ content: string; toolCalls?: ToolCallData[] }
       {toolCalls && toolCalls.length > 0 && (
         <div className="space-y-2">
           {toolCalls.map((toolCall, idx) => (
-            <ToolCall key={idx} toolCall={toolCall} />
+            <ToolCall key={getToolCallKey(toolCall, idx)} toolCall={toolCall} />
           ))}
         </div>
       )}
