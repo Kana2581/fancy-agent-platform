@@ -4,6 +4,12 @@ import type { ChatResponse } from '../api'
 import { ChatService } from '../api'
 import { useAppContext } from '../context/AppContext'
 import { handleUnauthorized } from '../utils/ApiClient'
+import { tokenManager } from '../utils/TokenManager'
+
+function getStreamBaseUrl(): string {
+  const raw = import.meta.env.VITE_API_BASE ?? 'http://localhost:8000'
+  return raw.replace(/\/api\/v1\/?$/, '').replace(/\/$/, '')
+}
 
 interface UseMessageHandlerProps {
   sessionId: string | undefined
@@ -330,9 +336,8 @@ export const useMessageHandler = ({
     sid: string,
     body: { content: string | null; parent_id: string | null; id: string; file_ids?: number[] }
   ) {
-    const rawBaseUrl = import.meta.env.VITE_API_BASE ?? 'http://localhost:8000'
-    const baseUrl = rawBaseUrl.replace(/\/api\/v1\/?$/, '').replace(/\/$/, '')
-    const token = localStorage.getItem('auth_token')
+    const baseUrl = getStreamBaseUrl()
+    const token = tokenManager.getToken() ?? ''
 
     const controller = new AbortController()
     abortCtrlRef.current = controller
@@ -536,9 +541,8 @@ export const useMessageHandler = ({
     setPendingApproval(null)
     setIsLoading(true)
 
-    const rawBaseUrl = import.meta.env.VITE_API_BASE ?? 'http://localhost:8000'
-    const baseUrl = rawBaseUrl.replace(/\/api\/v1\/?$/, '').replace(/\/$/, '')
-    const token = localStorage.getItem('auth_token')
+    const baseUrl = getStreamBaseUrl()
+    const token = tokenManager.getToken() ?? ''
 
     const controller = new AbortController()
     abortCtrlRef.current = controller
@@ -572,9 +576,8 @@ export const useMessageHandler = ({
     if (!sessionId || isCompressing || isLoading) return
     setIsCompressing(true)
 
-    const rawBaseUrl = import.meta.env.VITE_API_BASE ?? 'http://localhost:8000'
-    const baseUrl = rawBaseUrl.replace(/\/api\/v1\/?$/, '').replace(/\/$/, '')
-    const token = localStorage.getItem('auth_token')
+    const baseUrl = getStreamBaseUrl()
+    const token = tokenManager.getToken() ?? ''
     const controller = new AbortController()
     abortCtrlRef.current = controller
 

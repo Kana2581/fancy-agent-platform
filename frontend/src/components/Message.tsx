@@ -596,7 +596,7 @@ const MessageActions: React.FC<{
               <ChevronLeft size={14} className="text-gray-500 hover:text-gray-300" />
             </button>
 
-            <span className={`text-xs px-2 font-medium  'text-gray-500'}`}>
+            <span className="text-xs px-2 font-medium text-gray-500">
               {siblingInfo.current} / {siblingInfo.total}
             </span>
 

@@ -4,16 +4,6 @@ import type { LLMOut, MCPOut, AgentOut } from '../api'
 import { LlmModelsService, McpService, AgentsService } from '../api'
 import { tokenManager } from '../utils/TokenManager'
 
-export interface Agent {
-  id: number
-  user_id: number
-  avatar: string
-  description: string
-  model_id: number
-  system_prompt: string
-  chat_window_size: number
-}
-
 interface AppContextType {
   agents: AgentOut[]
   setAgents: React.Dispatch<React.SetStateAction<AgentOut[]>>
