@@ -1,8 +1,7 @@
 /* generated using openapi-typescript-codegen -- do not edit */
 /* istanbul ignore file */
 /* tslint:disable */
- 
-export type UserEmailAgentCreate = {
-    agent_id: number;
-};
 
+export type UserEmailAgentCreate = {
+  agent_id: number
+}

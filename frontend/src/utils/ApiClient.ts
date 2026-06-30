@@ -1,30 +1,30 @@
-import axios from 'axios';
-import { OpenAPI } from '../api/';
-import { tokenManager } from './TokenManager';
+import axios from 'axios'
+import { OpenAPI } from '../api/'
+import { tokenManager } from './TokenManager'
 
-let _handling401 = false;
+let _handling401 = false
 
 export const handleUnauthorized = () => {
-  if (_handling401) return;
-  _handling401 = true;
-  tokenManager.removeToken();
-  alert('登录已过期，请重新登录');
-  window.location.replace('/login');
-};
+  if (_handling401) return
+  _handling401 = true
+  tokenManager.removeToken()
+  alert('登录已过期，请重新登录')
+  window.location.replace('/login')
+}
 
 axios.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error?.response?.status === 401) {
-      handleUnauthorized();
+      handleUnauthorized()
     }
-    return Promise.reject(error);
+    return Promise.reject(error instanceof Error ? error : new Error(String(error)))
   }
-);
+)
 
 export const setupApiClient = () => {
-  OpenAPI.BASE = import.meta.env.VITE_API_BASE ?? 'http://localhost:8000';
-  OpenAPI.WITH_CREDENTIALS = true;
+  OpenAPI.BASE = import.meta.env.VITE_API_BASE ?? 'http://localhost:8000'
+  OpenAPI.WITH_CREDENTIALS = true
 
-  OpenAPI.TOKEN = async () => tokenManager.getToken();
-};
+  OpenAPI.TOKEN = () => Promise.resolve(tokenManager.getToken() ?? '')
+}

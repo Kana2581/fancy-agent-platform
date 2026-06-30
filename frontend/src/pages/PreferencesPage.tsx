@@ -1,11 +1,11 @@
-import React from 'react';
-import { ArrowLeft, Eye, EyeOff } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
-import { useHideIntermediatePref } from '../utils/UIPreferences';
+import React from 'react'
+import { ArrowLeft, Eye, EyeOff } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+import { useHideIntermediatePref } from '../utils/UIPreferences'
 
 const PreferencesPage: React.FC = () => {
-  const navigate = useNavigate();
-  const [hideIntermediate, setHideIntermediate] = useHideIntermediatePref();
+  const navigate = useNavigate()
+  const [hideIntermediate, setHideIntermediate] = useHideIntermediatePref()
 
   return (
     <div className="p-8 overflow-y-auto">
@@ -21,7 +21,9 @@ const PreferencesPage: React.FC = () => {
           </button>
           <div className="text-center">
             <h2 className="text-3xl font-bold text-gray-800 dark:text-zinc-100">界面偏好</h2>
-            <p className="text-sm text-gray-600 dark:text-zinc-400 mt-1">个性化设置，仅影响当前浏览器</p>
+            <p className="text-sm text-gray-600 dark:text-zinc-400 mt-1">
+              个性化设置，仅影响当前浏览器
+            </p>
           </div>
           <div className="w-[88px]" />
         </div>
@@ -40,7 +42,9 @@ const PreferencesPage: React.FC = () => {
             <div className="flex-1 min-w-0">
               <div className="flex items-center justify-between gap-4">
                 <div className="min-w-0">
-                  <div className="font-medium text-gray-800 dark:text-zinc-100">隐藏中间过程消息</div>
+                  <div className="font-medium text-gray-800 dark:text-zinc-100">
+                    隐藏中间过程消息
+                  </div>
                   <p className="text-xs text-gray-500 dark:text-zinc-400 mt-0.5">
                     开启后，工具调用与工具返回将默认折叠成一条提示，仅显示最终回答；点击折叠条可临时展开。
                   </p>
@@ -66,7 +70,7 @@ const PreferencesPage: React.FC = () => {
         </div>
       </div>
     </div>
-  );
-};
+  )
+}
 
-export default PreferencesPage;
+export default PreferencesPage

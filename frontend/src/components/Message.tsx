@@ -1,44 +1,57 @@
-import React, { useState } from 'react';
-import { ChevronDown, ChevronRight, Wrench, Bot, Copy, FileText, Edit2, Check, X, RotateCw, ChevronLeft, ChevronRight as ChevronRightIcon } from 'lucide-react';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
-import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
-import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
-import type { SimpleFile } from '../api';
-import { FilePresentCard, tryParseFilePresent } from './FilePresentCard';
-import { writeToClipboard } from '../utils/clipboard';
+import React, { useState } from 'react'
+import {
+  ChevronDown,
+  ChevronRight,
+  Wrench,
+  Bot,
+  Copy,
+  FileText,
+  Edit2,
+  Check,
+  X,
+  RotateCw,
+  ChevronLeft,
+  ChevronRight as ChevronRightIcon,
+} from 'lucide-react'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
+import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
+import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism'
+import type { SimpleFile } from '../api'
+import { FilePresentCard, tryParseFilePresent } from './FilePresentCard'
+import { writeToClipboard } from '../utils/clipboard'
 
 type TextAnnotation = {
-  id: string;
-  type: 'citation';
-  title: string;
-  cited_text: string;
-};
+  id: string
+  type: 'citation'
+  title: string
+  cited_text: string
+}
 
 type ContentBlock = {
-  id: string;
-  type: 'text';
-  text: string;
-  annotations?: TextAnnotation[];
-};
+  id: string
+  type: 'text'
+  text: string
+  annotations?: TextAnnotation[]
+}
 
 type ToolCallData = {
-  id?: string;
-  name?: string;
-  args?: Record<string, unknown>;
-  [key: string]: unknown;
-};
+  id?: string
+  name?: string
+  args?: Record<string, unknown>
+  [key: string]: unknown
+}
 
 type UsageMetadata = {
-  input_tokens?: number;
-  output_tokens?: number;
-  total_tokens?: number;
-  [key: string]: unknown;
-};
+  input_tokens?: number
+  output_tokens?: number
+  total_tokens?: number
+  [key: string]: unknown
+}
 
 // 工具调用组件
 export const ToolCall: React.FC<{ toolCall: ToolCallData }> = ({ toolCall }) => {
-  const [isExpanded, setIsExpanded] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(false)
 
   return (
     <div className="mt-2 border border-gray-200 dark:border-zinc-800 rounded-lg overflow-hidden bg-gray-50 dark:bg-zinc-900">
@@ -48,9 +61,7 @@ export const ToolCall: React.FC<{ toolCall: ToolCallData }> = ({ toolCall }) => 
       >
         <div className="flex items-center gap-2">
           <Wrench size={14} className="text-gray-500 dark:text-zinc-400" />
-          <span className="text-sm font-medium text-gray-800">
-            {toolCall.name || 'Tool Call'}
-          </span>
+          <span className="text-sm font-medium text-gray-800">{toolCall.name || 'Tool Call'}</span>
         </div>
         {isExpanded ? (
           <ChevronDown size={16} className="text-gray-500 dark:text-zinc-400" />
@@ -66,27 +77,27 @@ export const ToolCall: React.FC<{ toolCall: ToolCallData }> = ({ toolCall }) => 
         </div>
       )}
     </div>
-  );
-};
+  )
+}
 
 // 工具消息组件（可折叠）
 export const ToolMessage: React.FC<{ content: string }> = ({ content }) => {
-  const [isExpanded, setIsExpanded] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(false)
 
   // 优先识别 ws_present 输出，渲染为下载卡片
-  const present = tryParseFilePresent(content);
+  const present = tryParseFilePresent(content)
   if (present) {
-    return <FilePresentCard files={present.files} title={present.title} />;
+    return <FilePresentCard files={present.files} title={present.title} />
   }
 
-  let parsedContent;
-  let isJson = false;
+  let parsedContent
+  let isJson = false
 
   try {
-    parsedContent = JSON.parse(content);
-    isJson = true;
+    parsedContent = JSON.parse(content)
+    isJson = true
   } catch {
-    parsedContent = content;
+    parsedContent = content
   }
 
   return (
@@ -112,19 +123,20 @@ export const ToolMessage: React.FC<{ content: string }> = ({ content }) => {
               {JSON.stringify(parsedContent, null, 2)}
             </pre>
           ) : (
-            <div className="text-sm text-gray-700 whitespace-pre-wrap">
-              {content}
-            </div>
+            <div className="text-sm text-gray-700 whitespace-pre-wrap">{content}</div>
           )}
         </div>
       )}
     </div>
-  );
-};
+  )
+}
 
 // AI 消息组件（支持 Markdown）
-export const AIMessage: React.FC<{ content: string; toolCalls?: ToolCallData[] }> = ({ content, toolCalls }) => {
-  const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
+export const AIMessage: React.FC<{ content: string; toolCalls?: ToolCallData[] }> = ({
+  content,
+  toolCalls,
+}) => {
+  const [lightboxUrl, setLightboxUrl] = useState<string | null>(null)
   return (
     <div className="space-y-2">
       {lightboxUrl && (
@@ -133,7 +145,11 @@ export const AIMessage: React.FC<{ content: string; toolCalls?: ToolCallData[] }
           onClick={() => setLightboxUrl(null)}
         >
           <div className="max-w-3xl max-h-[90vh] p-2" onClick={(e) => e.stopPropagation()}>
-            <img src={lightboxUrl} alt="preview" className="max-w-full max-h-[85vh] rounded-2xl shadow-sm object-contain" />
+            <img
+              src={lightboxUrl}
+              alt="preview"
+              className="max-w-full max-h-[85vh] rounded-2xl shadow-sm object-contain"
+            />
           </div>
         </div>
       )}
@@ -142,31 +158,56 @@ export const AIMessage: React.FC<{ content: string; toolCalls?: ToolCallData[] }
           remarkPlugins={[remarkGfm]}
           components={{
             code({ className, children, ...props }) {
-              const match = /language-(\w+)/.exec(className || '');
-              const isInline = !(className && match);
+              const match = /language-(\w+)/.exec(className || '')
+              const isInline = !(className && match)
               return !isInline && match ? (
                 <SyntaxHighlighter
                   style={oneDark as { [key: string]: React.CSSProperties }}
                   language={match[1]}
                   PreTag="div"
                 >
+                  {/* eslint-disable-next-line @typescript-eslint/no-base-to-string -- children is string content in code blocks */}
                   {String(children).replace(/\n$/, '')}
                 </SyntaxHighlighter>
               ) : (
-                <code className="bg-gray-200 dark:bg-zinc-700 px-1.5 py-0.5 rounded text-gray-600 dark:text-zinc-300" {...props}>
+                <code
+                  className="bg-gray-200 dark:bg-zinc-700 px-1.5 py-0.5 rounded text-gray-600 dark:text-zinc-300"
+                  {...props}
+                >
                   {children}
                 </code>
-              );
+              )
             },
             p: ({ children }) => <p className="mb-2 leading-relaxed text-gray-800">{children}</p>,
-            ul: ({ children }) => <ul className="list-disc list-inside space-y-1 text-gray-800">{children}</ul>,
-            ol: ({ children }) => <ol className="list-decimal list-inside space-y-1 text-gray-800">{children}</ol>,
+            ul: ({ children }) => (
+              <ul className="list-disc list-inside space-y-1 text-gray-800">{children}</ul>
+            ),
+            ol: ({ children }) => (
+              <ol className="list-decimal list-inside space-y-1 text-gray-800">{children}</ol>
+            ),
             li: ({ children }) => <li className="text-gray-800">{children}</li>,
-            h1: ({ children }) => <h1 className="text-2xl font-bold mb-2 text-gray-900 dark:text-gray-100">{children}</h1>,
-            h2: ({ children }) => <h2 className="text-xl font-bold mb-2 text-gray-900 dark:text-gray-100">{children}</h2>,
-            h3: ({ children }) => <h3 className="text-lg font-bold mb-2 text-gray-900 dark:text-gray-100">{children}</h3>,
+            h1: ({ children }) => (
+              <h1 className="text-2xl font-bold mb-2 text-gray-900 dark:text-gray-100">
+                {children}
+              </h1>
+            ),
+            h2: ({ children }) => (
+              <h2 className="text-xl font-bold mb-2 text-gray-900 dark:text-gray-100">
+                {children}
+              </h2>
+            ),
+            h3: ({ children }) => (
+              <h3 className="text-lg font-bold mb-2 text-gray-900 dark:text-gray-100">
+                {children}
+              </h3>
+            ),
             a: ({ children, href }) => (
-              <a href={href} className="text-gray-600 dark:text-zinc-300 hover:text-gray-600 dark:text-zinc-300 underline" target="_blank" rel="noopener noreferrer">
+              <a
+                href={href}
+                className="text-gray-600 dark:text-zinc-300 hover:text-gray-600 dark:text-zinc-300 underline"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
                 {children}
               </a>
             ),
@@ -201,20 +242,21 @@ export const AIMessage: React.FC<{ content: string; toolCalls?: ToolCallData[] }
                 {children}
               </td>
             ),
-            img: ({ src, alt }) => src ? (
-              <img
-                src={src}
-                alt={alt ?? ''}
-                className="max-w-full rounded-xl border border-gray-200 dark:border-zinc-800 my-2 cursor-pointer hover:opacity-90 transition-opacity"
-                onClick={() => setLightboxUrl(src)}
-              />
-            ) : null,
+            img: ({ src, alt }) =>
+              src ? (
+                <img
+                  src={src}
+                  alt={alt ?? ''}
+                  className="max-w-full rounded-xl border border-gray-200 dark:border-zinc-800 my-2 cursor-pointer hover:opacity-90 transition-opacity"
+                  onClick={() => setLightboxUrl(src)}
+                />
+              ) : null,
           }}
         >
           {content}
         </ReactMarkdown>
       </div>
-      
+
       {/* 渲染工具调用 */}
       {toolCalls && toolCalls.length > 0 && (
         <div className="space-y-2">
@@ -224,8 +266,8 @@ export const AIMessage: React.FC<{ content: string; toolCalls?: ToolCallData[] }
         </div>
       )}
     </div>
-  );
-};
+  )
+}
 
 // 文件卡片组件 - 优化版
 export const FileCard: React.FC<{ file: TextAnnotation }> = ({ file }) => {
@@ -238,26 +280,24 @@ export const FileCard: React.FC<{ file: TextAnnotation }> = ({ file }) => {
         <span className="text-sm font-medium text-gray-800 dark:text-zinc-200 truncate">
           {file.title}
         </span>
-        <span className="text-xs text-gray-500 dark:text-zinc-400">
-          已上传文件
-        </span>
+        <span className="text-xs text-gray-500 dark:text-zinc-400">已上传文件</span>
       </div>
     </div>
-  );
-};
+  )
+}
 
 const AttachedFileCard: React.FC<{ file: SimpleFile }> = ({ file }) => {
-  const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
-  const fallbackName = file.url ? decodeURIComponent(file.url.split('/').pop() || '') : '';
-  const title = fallbackName || `文件 #${file.id}`;
-  const isImage = file.content_type?.startsWith('image/');
+  const [lightboxUrl, setLightboxUrl] = useState<string | null>(null)
+  const fallbackName = file.url ? decodeURIComponent(file.url.split('/').pop() || '') : ''
+  const title = fallbackName || `文件 #${file.id}`
+  const isImage = file.content_type?.startsWith('image/')
 
   if (isImage && file.url) {
     return (
       <>
         <div
           className="mt-2 cursor-pointer rounded-xl overflow-hidden border border-gray-200 dark:border-zinc-800 hover:border-white/40 transition-all group"
-          onClick={() => setLightboxUrl(file.url!)}
+          onClick={() => setLightboxUrl(file.url)}
         >
           <img
             src={file.url}
@@ -274,12 +314,16 @@ const AttachedFileCard: React.FC<{ file: SimpleFile }> = ({ file }) => {
             onClick={() => setLightboxUrl(null)}
           >
             <div className="max-w-3xl max-h-[90vh] p-2" onClick={(e) => e.stopPropagation()}>
-              <img src={lightboxUrl} alt={title} className="max-w-full max-h-[85vh] rounded-2xl shadow-sm object-contain" />
+              <img
+                src={lightboxUrl}
+                alt={title}
+                className="max-w-full max-h-[85vh] rounded-2xl shadow-sm object-contain"
+              />
             </div>
           </div>
         )}
       </>
-    );
+    )
   }
 
   return (
@@ -288,7 +332,9 @@ const AttachedFileCard: React.FC<{ file: SimpleFile }> = ({ file }) => {
         <FileText size={20} className="text-gray-500 dark:text-zinc-300" />
       </div>
       <div className="flex flex-col flex-1 min-w-0">
-        <span className="text-sm font-medium text-gray-800 dark:text-zinc-200 truncate">{title}</span>
+        <span className="text-sm font-medium text-gray-800 dark:text-zinc-200 truncate">
+          {title}
+        </span>
         {file.url ? (
           <a
             href={file.url}
@@ -303,71 +349,76 @@ const AttachedFileCard: React.FC<{ file: SimpleFile }> = ({ file }) => {
         )}
       </div>
     </div>
-  );
-};
+  )
+}
 
 // 解析人类消息内容
 function parseHumanContent(content: string) {
-  let parsedContent: ContentBlock[];
-  let isJson = false;
-  
-    try {
-        const result = JSON.parse(content);
-        
-        if (Array.isArray(result)) {
-            parsedContent = result; // 安全赋值
-            isJson = true;
-        } else {
-            // 如果不是数组，可以包成数组或者报错
-            parsedContent = [result]; 
-            isJson = true;
-            // 或者 throw new Error('Expected array');
-        }
+  let parsedContent: ContentBlock[]
+  let isJson = false
 
-    } catch {
-        parsedContent = [];
+  try {
+    const result = JSON.parse(content)
+
+    if (Array.isArray(result)) {
+      parsedContent = result // 安全赋值
+      isJson = true
+    } else {
+      // 如果不是数组，可以包成数组或者报错
+      parsedContent = [result]
+      isJson = true
+      // 或者 throw new Error('Expected array');
     }
+  } catch {
+    parsedContent = []
+  }
 
   if (!isJson) {
     return {
       texts: [content],
       files: [] as TextAnnotation[],
-    };
+    }
   }
 
-  const texts: string[] = [];
-  const files: TextAnnotation[] = [];
+  const texts: string[] = []
+  const files: TextAnnotation[] = []
   for (const block of parsedContent) {
-    if (block.type !== 'text') continue;
+    if (block.type !== 'text') continue
 
     // 有 annotations → 文件
     if (block.annotations && block.annotations.length > 0) {
       for (const ann of block.annotations) {
         if (ann.type === 'citation') {
-          files.push(ann);
+          files.push(ann)
         }
       }
-      continue;
+      continue
     }
 
     // 没 annotations → 人说的话
     if (block.text && block.text.trim()) {
-      texts.push(block.text);
+      texts.push(block.text)
     }
   }
 
-  return { texts, files };
+  return { texts, files }
 }
 
 // 人类消息组件 - 支持编辑
 export const HumanMessage: React.FC<{
-  content: string;
-  files?: SimpleFile[];
-  isEditing: boolean;
-  editingContent: string;
-  onEditingContentChange: (content: string) => void;
-}> = ({ content, files: attachedFiles = [], isEditing, editingContent, onEditingContentChange }) => {
-  const { texts, files } = parseHumanContent(content);
+  content: string
+  files?: SimpleFile[]
+  isEditing: boolean
+  editingContent: string
+  onEditingContentChange: (content: string) => void
+}> = ({
+  content,
+  files: attachedFiles = [],
+  isEditing,
+  editingContent,
+  onEditingContentChange,
+}) => {
+  const { texts, files } = parseHumanContent(content)
 
   if (isEditing) {
     return (
@@ -380,7 +431,7 @@ export const HumanMessage: React.FC<{
           autoFocus
         />
       </div>
-    );
+    )
   }
 
   return (
@@ -403,41 +454,42 @@ export const HumanMessage: React.FC<{
         </div>
       )}
 
-      {attachedFiles.length > 0 && (() => {
-        const imageFiles = attachedFiles.filter(f => f.content_type?.startsWith('image/'));
-        const docFiles = attachedFiles.filter(f => !f.content_type?.startsWith('image/'));
-        return (
-          <div className="space-y-2">
-            {imageFiles.length > 0 && (
-              <div className={imageFiles.length === 1 ? '' : 'grid grid-cols-2 gap-2'}>
-                {imageFiles.map((file) => (
-                  <AttachedFileCard key={file.id} file={file} />
-                ))}
-              </div>
-            )}
-            {docFiles.map((file) => (
-              <AttachedFileCard key={file.id} file={file} />
-            ))}
-          </div>
-        );
-      })()}
+      {attachedFiles.length > 0 &&
+        (() => {
+          const imageFiles = attachedFiles.filter((f) => f.content_type?.startsWith('image/'))
+          const docFiles = attachedFiles.filter((f) => !f.content_type?.startsWith('image/'))
+          return (
+            <div className="space-y-2">
+              {imageFiles.length > 0 && (
+                <div className={imageFiles.length === 1 ? '' : 'grid grid-cols-2 gap-2'}>
+                  {imageFiles.map((file) => (
+                    <AttachedFileCard key={file.id} file={file} />
+                  ))}
+                </div>
+              )}
+              {docFiles.map((file) => (
+                <AttachedFileCard key={file.id} file={file} />
+              ))}
+            </div>
+          )
+        })()}
     </div>
-  );
-};
+  )
+}
 
 // 消息操作按钮组件
 const MessageActions: React.FC<{
-  type: string;
-  isEditing: boolean;
-  isHovered: boolean;
-  content: string;
-  onStartEdit?: () => void;
-  onCancelEdit?: () => void;
-  onSaveEdit?: () => void;
-  onRegenerate?: () => void;
-  onLoadSiblings?: () => void;
-  onSiblingSwitch?: (direction: 'prev' | 'next') => void;
-  siblingInfo?: { total: number; current: number };
+  type: string
+  isEditing: boolean
+  isHovered: boolean
+  content: string
+  onStartEdit?: () => void
+  onCancelEdit?: () => void
+  onSaveEdit?: () => void
+  onRegenerate?: () => void
+  onLoadSiblings?: () => void
+  onSiblingSwitch?: (direction: 'prev' | 'next') => void
+  siblingInfo?: { total: number; current: number }
 }> = ({
   type,
   isEditing,
@@ -451,24 +503,24 @@ const MessageActions: React.FC<{
   onSiblingSwitch,
   siblingInfo,
 }) => {
-  const [copied, setCopied] = useState(false);
+  const [copied, setCopied] = useState(false)
   React.useEffect(() => {
     if (isHovered && onLoadSiblings) {
-      onLoadSiblings();
+      onLoadSiblings()
     }
-  }, [isHovered, onLoadSiblings]);
+  }, [isHovered, onLoadSiblings])
   const handleCopy = async () => {
     try {
-      await writeToClipboard(content);
-      setCopied(true);
-      window.setTimeout(() => setCopied(false), 1200);
+      await writeToClipboard(content)
+      setCopied(true)
+      window.setTimeout(() => setCopied(false), 1200)
     } catch (err) {
-      console.error('复制失败', err);
-      alert('复制失败，请手动复制。');
+      console.error('复制失败', err)
+      alert('复制失败，请手动复制。')
     }
-  };
+  }
   return (
-    <div 
+    <div
       className={`flex items-center gap-1 transition-opacity duration-200 ${
         isHovered || isEditing ? 'opacity-100' : 'opacity-0 pointer-events-none'
       }`}
@@ -530,54 +582,57 @@ const MessageActions: React.FC<{
       )}
 
       {/* 切换消息按钮 */}
-      {(type === 'human' || type === 'ai') && !isEditing && siblingInfo && siblingInfo.total > 1 && (
-        <div className="flex items-center gap-0.5 ml-1 bg-gray-50 dark:bg-zinc-900 rounded-lg px-1.5 py-1">
-          <button
-            onClick={() => onSiblingSwitch?.('prev')}
-            disabled={siblingInfo.current <= 1}
-            className="p-1 hover:bg-gray-100 dark:hover:bg-zinc-700 rounded transition-all hover:scale-110 disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:scale-100"
-            title="上一条"
-          >
-            <ChevronLeft size={14} className="text-gray-500 hover:text-gray-300" />
-          </button>
-          
-          <span className={`text-xs px-2 font-medium  'text-gray-500'}`}>
-            {siblingInfo.current} / {siblingInfo.total}
-          </span>
-          
-          <button
-            onClick={() => onSiblingSwitch?.('next')}
-            disabled={siblingInfo.current >= siblingInfo.total}
-            className="p-1 hover:bg-gray-100 dark:hover:bg-zinc-700 rounded transition-all hover:scale-110 disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:scale-100"
-            title="下一条"
-          >
-            <ChevronRightIcon size={14} className={'text-gray-500'} />
-          </button>
-        </div>
-      )}
+      {(type === 'human' || type === 'ai') &&
+        !isEditing &&
+        siblingInfo &&
+        siblingInfo.total > 1 && (
+          <div className="flex items-center gap-0.5 ml-1 bg-gray-50 dark:bg-zinc-900 rounded-lg px-1.5 py-1">
+            <button
+              onClick={() => onSiblingSwitch?.('prev')}
+              disabled={siblingInfo.current <= 1}
+              className="p-1 hover:bg-gray-100 dark:hover:bg-zinc-700 rounded transition-all hover:scale-110 disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:scale-100"
+              title="上一条"
+            >
+              <ChevronLeft size={14} className="text-gray-500 hover:text-gray-300" />
+            </button>
+
+            <span className={`text-xs px-2 font-medium  'text-gray-500'}`}>
+              {siblingInfo.current} / {siblingInfo.total}
+            </span>
+
+            <button
+              onClick={() => onSiblingSwitch?.('next')}
+              disabled={siblingInfo.current >= siblingInfo.total}
+              className="p-1 hover:bg-gray-100 dark:hover:bg-zinc-700 rounded transition-all hover:scale-110 disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:scale-100"
+              title="下一条"
+            >
+              <ChevronRightIcon size={14} className={'text-gray-500'} />
+            </button>
+          </div>
+        )}
     </div>
-  );
-};
+  )
+}
 
 // 消息气泡组件
 export const MessageBubble: React.FC<{
-  type: string;
-  name?: string | null;
-  content: string;
-  files?: SimpleFile[];
-  toolCalls?: ToolCallData[];
-  usageMetadata?: UsageMetadata | null;
-  messageId?: string;
-  isEditing?: boolean;
-  editingContent?: string;
-  onStartEdit?: (messageId: string, content: string) => void;
-  onCancelEdit?: () => void;
-  onSaveEdit?: (messageId: string) => void;
-  onEditingContentChange?: (content: string) => void;
-  onRegenerate?: (messageId: string) => void;
-  onLoadSiblings?: (messageId: string) => void;
-  onSiblingSwitch?: (messageId: string, direction: 'prev' | 'next') => void;
-  siblingInfo?: { total: number; current: number };
+  type: string
+  name?: string | null
+  content: string
+  files?: SimpleFile[]
+  toolCalls?: ToolCallData[]
+  usageMetadata?: UsageMetadata | null
+  messageId?: string
+  isEditing?: boolean
+  editingContent?: string
+  onStartEdit?: (messageId: string, content: string) => void
+  onCancelEdit?: () => void
+  onSaveEdit?: (messageId: string) => void
+  onEditingContentChange?: (content: string) => void
+  onRegenerate?: (messageId: string) => void
+  onLoadSiblings?: (messageId: string) => void
+  onSiblingSwitch?: (messageId: string, direction: 'prev' | 'next') => void
+  siblingInfo?: { total: number; current: number }
 }> = ({
   type,
   content,
@@ -596,7 +651,7 @@ export const MessageBubble: React.FC<{
   onSiblingSwitch,
   siblingInfo,
 }) => {
-  const [isHovered, setIsHovered] = useState(false);
+  const [isHovered, setIsHovered] = useState(false)
 
   return (
     <div
@@ -643,9 +698,14 @@ export const MessageBubble: React.FC<{
 
         {/* 操作按钮 */}
         {messageId && (type === 'human' || type === 'ai') && (
-          <div className={`flex items-center gap-2 ${type === 'human' ? 'justify-end' : 'justify-start'} mt-1`}>
+          <div
+            className={`flex items-center gap-2 ${type === 'human' ? 'justify-end' : 'justify-start'} mt-1`}
+          >
             {type === 'ai' && usageMetadata?.output_tokens && (
-              <span className="text-xs text-gray-400" title={`输入: ${usageMetadata.input_tokens ?? '?'} | 输出: ${usageMetadata.output_tokens} | 合计: ${usageMetadata.total_tokens ?? '?'}`}>
+              <span
+                className="text-xs text-gray-400"
+                title={`输入: ${usageMetadata.input_tokens ?? '?'} | 输出: ${usageMetadata.output_tokens} | 合计: ${usageMetadata.total_tokens ?? '?'}`}
+              >
                 ↑{usageMetadata.input_tokens ?? '?'} ↓{usageMetadata.output_tokens}
               </span>
             )}
@@ -673,5 +733,5 @@ export const MessageBubble: React.FC<{
         </div>
       )}
     </div>
-  );
-};
+  )
+}

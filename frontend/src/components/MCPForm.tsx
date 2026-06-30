@@ -1,59 +1,59 @@
-import React, { useState } from 'react';
-import { Save, ChevronDown, ChevronUp, CheckCircle, XCircle } from 'lucide-react';
-import ThemedSelect from './ThemedSelect';
+import React, { useState } from 'react'
+import { Save, ChevronDown, ChevronUp, CheckCircle, XCircle } from 'lucide-react'
+import ThemedSelect from './ThemedSelect'
 
 interface MCPFormData {
-  mcp_name: string;
-  transport: string;
-  config_json: Record<string, unknown>;
-  is_enabled: boolean;
+  mcp_name: string
+  transport: string
+  config_json: Record<string, unknown>
+  is_enabled: boolean
 }
 
 interface MCPFormProps {
-  form: MCPFormData;
-  onChange: (form: MCPFormData) => void;
-  onSave: () => void;
-  onCancel: () => void;
+  form: MCPFormData
+  onChange: (form: MCPFormData) => void
+  onSave: () => void
+  onCancel: () => void
 }
 
 const MCPForm: React.FC<MCPFormProps> = ({ form, onChange, onSave, onCancel }) => {
-  const isNew = form.mcp_name === '';
-  const [importOpen, setImportOpen] = useState(isNew);
-  const [importText, setImportText] = useState('');
-  const [importStatus, setImportStatus] = useState<'idle' | 'ok' | 'error'>('idle');
-  const [importError, setImportError] = useState('');
+  const isNew = form.mcp_name === ''
+  const [importOpen, setImportOpen] = useState(isNew)
+  const [importText, setImportText] = useState('')
+  const [importStatus, setImportStatus] = useState<'idle' | 'ok' | 'error'>('idle')
+  const [importError, setImportError] = useState('')
 
   const handleImport = () => {
     try {
-      const raw = JSON.parse(importText);
+      const raw = JSON.parse(importText)
       // 兼容完整格式 { mcpServers: { ... } } 和直接粘贴 server 对象
-      const servers = (raw.mcpServers && typeof raw.mcpServers === 'object') ? raw.mcpServers : raw;
-      const firstName = Object.keys(servers)[0];
-      if (!firstName) throw new Error('未找到有效的 MCP 服务配置');
-      const serverCfg = servers[firstName];
-      if (typeof serverCfg !== 'object' || serverCfg === null) throw new Error('服务配置格式无效');
+      const servers = raw.mcpServers && typeof raw.mcpServers === 'object' ? raw.mcpServers : raw
+      const firstName = Object.keys(servers)[0]
+      if (!firstName) throw new Error('未找到有效的 MCP 服务配置')
+      const serverCfg = servers[firstName]
+      if (typeof serverCfg !== 'object' || serverCfg === null) throw new Error('服务配置格式无效')
 
       // 优先通过 url+transport/type 判断；有 command 或都不满足时默认 stdio
-      const cfgTransport = serverCfg.transport ?? serverCfg.type;
-      let transport: string;
-      if (serverCfg.url && cfgTransport === 'sse') transport = 'sse';
-      else if (serverCfg.url && cfgTransport === 'http') transport = 'http';
-      else if (serverCfg.url) transport = 'http';
-      else transport = 'stdio';
+      const cfgTransport = serverCfg.transport ?? serverCfg.type
+      let transport: string
+      if (serverCfg.url && cfgTransport === 'sse') transport = 'sse'
+      else if (serverCfg.url && cfgTransport === 'http') transport = 'http'
+      else if (serverCfg.url) transport = 'http'
+      else transport = 'stdio'
 
-      onChange({ ...form, mcp_name: firstName, transport, config_json: serverCfg });
-      setImportStatus('ok');
-      setImportOpen(false);
+      onChange({ ...form, mcp_name: firstName, transport, config_json: serverCfg })
+      setImportStatus('ok')
+      setImportOpen(false)
     } catch (e) {
-      setImportStatus('error');
-      setImportError(e instanceof Error ? e.message : '无效 JSON');
+      setImportStatus('error')
+      setImportError(e instanceof Error ? e.message : '无效 JSON')
     }
-  };
+  }
 
   const handleImportTextChange = (v: string) => {
-    setImportText(v);
-    if (importStatus !== 'idle') setImportStatus('idle');
-  };
+    setImportText(v)
+    if (importStatus !== 'idle') setImportStatus('idle')
+  }
 
   return (
     <div className="space-y-5">
@@ -61,7 +61,7 @@ const MCPForm: React.FC<MCPFormProps> = ({ form, onChange, onSave, onCancel }) =
       <div className="border border-gray-200 dark:border-zinc-700 rounded-2xl overflow-hidden">
         <button
           type="button"
-          onClick={() => setImportOpen(o => !o)}
+          onClick={() => setImportOpen((o) => !o)}
           className="w-full flex items-center justify-between px-4 py-3 bg-gray-50 dark:bg-zinc-800 hover:bg-gray-100 dark:hover:bg-zinc-700 transition-all text-left"
         >
           <span className="text-sm font-medium text-gray-700 dark:text-zinc-300">
@@ -73,19 +73,26 @@ const MCPForm: React.FC<MCPFormProps> = ({ form, onChange, onSave, onCancel }) =
                 <CheckCircle size={14} /> 解析成功
               </span>
             )}
-            {importOpen ? <ChevronUp size={16} className="text-gray-500" /> : <ChevronDown size={16} className="text-gray-500" />}
+            {importOpen ? (
+              <ChevronUp size={16} className="text-gray-500" />
+            ) : (
+              <ChevronDown size={16} className="text-gray-500" />
+            )}
           </span>
         </button>
 
         {importOpen && (
           <div className="px-4 pb-4 pt-3 space-y-3 bg-white dark:bg-zinc-900">
             <p className="text-xs text-gray-500 dark:text-zinc-400">
-              粘贴标准 MCP JSON（支持 Claude Desktop 格式，含 <code>mcpServers</code> 键或直接粘贴 server 对象），自动识别名称、传输方式和配置。
+              粘贴标准 MCP JSON（支持 Claude Desktop 格式，含 <code>mcpServers</code> 键或直接粘贴
+              server 对象），自动识别名称、传输方式和配置。
             </p>
             <textarea
               value={importText}
               onChange={(e) => handleImportTextChange(e.target.value)}
-              placeholder={'{\n  "mcpServers": {\n    "my-tool": {\n      "command": "npx",\n      "args": ["-y", "@some/mcp-server"]\n    }\n  }\n}'}
+              placeholder={
+                '{\n  "mcpServers": {\n    "my-tool": {\n      "command": "npx",\n      "args": ["-y", "@some/mcp-server"]\n    }\n  }\n}'
+              }
               rows={7}
               className="w-full px-4 py-3 bg-gray-50 dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-xl focus:ring-1 focus:ring-gray-300 dark:focus:ring-zinc-600 focus:border-gray-500 dark:focus:border-zinc-400 outline-none resize-none font-mono text-sm transition-all text-gray-800 dark:text-zinc-200 placeholder-gray-400"
             />
@@ -139,7 +146,7 @@ const MCPForm: React.FC<MCPFormProps> = ({ form, onChange, onSave, onCancel }) =
           value={JSON.stringify(form.config_json, null, 2)}
           onChange={(e) => {
             try {
-              onChange({ ...form, config_json: JSON.parse(e.target.value) });
+              onChange({ ...form, config_json: JSON.parse(e.target.value) })
             } catch {
               /* ignore invalid JSON while the user is still typing */
             }
@@ -179,7 +186,7 @@ const MCPForm: React.FC<MCPFormProps> = ({ form, onChange, onSave, onCancel }) =
         </button>
       </div>
     </div>
-  );
-};
+  )
+}
 
-export default MCPForm;
+export default MCPForm

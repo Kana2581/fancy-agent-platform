@@ -3,6 +3,5 @@
 /* tslint:disable */
 /* eslint-disable */
 export type TestRequest = {
-    params?: Record<string, any>;
-};
-
+  params?: Record<string, any>
+}

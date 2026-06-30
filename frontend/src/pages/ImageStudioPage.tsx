@@ -1,151 +1,152 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { ArrowLeft, ImageIcon, Download, Loader2 } from 'lucide-react';
-import ThemedSelect from '../components/ThemedSelect';
-import { useNavigate } from 'react-router-dom';
-import type { ImageToolOut, GeneratedImageOut } from '../api';
-import { GeneratedImagesService, ImageToolsService } from '../api';
+import React, { useState, useEffect, useMemo } from 'react'
+import { ArrowLeft, ImageIcon, Download, Loader2 } from 'lucide-react'
+import ThemedSelect from '../components/ThemedSelect'
+import { useNavigate } from 'react-router-dom'
+import type { ImageToolOut, GeneratedImageOut } from '../api'
+import { GeneratedImagesService, ImageToolsService } from '../api'
 
 const ASPECT_RATIO_PRESETS = [
-  { label: '1:1',  width: 1024, height: 1024 },
-  { label: '4:3',  width: 1024, height: 768  },
-  { label: '3:4',  width: 768,  height: 1024 },
-  { label: '16:9', width: 1024, height: 576  },
-  { label: '9:16', width: 576,  height: 1024 },
-  { label: '3:2',  width: 1536, height: 1024 },
-  { label: '2:3',  width: 1024, height: 1536 },
-];
+  { label: '1:1', width: 1024, height: 1024 },
+  { label: '4:3', width: 1024, height: 768 },
+  { label: '3:4', width: 768, height: 1024 },
+  { label: '16:9', width: 1024, height: 576 },
+  { label: '9:16', width: 576, height: 1024 },
+  { label: '3:2', width: 1536, height: 1024 },
+  { label: '2:3', width: 1024, height: 1536 },
+]
 
-type GenerationMode = 'txt2img' | 'img2img';
-type Img2ImgSourceMode = 'upload' | 'history';
+type GenerationMode = 'txt2img' | 'img2img'
+type Img2ImgSourceMode = 'upload' | 'history'
 
 const ImageStudioPage: React.FC = () => {
-  const navigate = useNavigate();
+  const navigate = useNavigate()
 
-  const [tools, setTools] = useState<ImageToolOut[]>([]);
-  const [loadingInit, setLoadingInit] = useState(true);
-  const [mode, setMode] = useState<GenerationMode>('txt2img');
+  const [tools, setTools] = useState<ImageToolOut[]>([])
+  const [loadingInit, setLoadingInit] = useState(true)
+  const [mode, setMode] = useState<GenerationMode>('txt2img')
 
-  const [selectedToolId, setSelectedToolId] = useState<number | null>(null);
+  const [selectedToolId, setSelectedToolId] = useState<number | null>(null)
   const availableTools = useMemo(
-    () => (mode === 'img2img' ? tools.filter(t => t.support_img2img) : tools),
-    [mode, tools],
-  );
+    () => (mode === 'img2img' ? tools.filter((t) => t.support_img2img) : tools),
+    [mode, tools]
+  )
 
-  const [positivePrompt, setPositivePrompt] = useState('');
-  const [imgWidth, setImgWidth] = useState(1024);
-  const [imgHeight, setImgHeight] = useState(1024);
-  const [img2imgSourceMode, setImg2imgSourceMode] = useState<Img2ImgSourceMode>('upload');
-  const [sourceImage, setSourceImage] = useState<File | null>(null);
-  const [generatedImages, setGeneratedImages] = useState<GeneratedImageOut[]>([]);
-  const [loadingGeneratedImages, setLoadingGeneratedImages] = useState(false);
-  const [selectedHistoryObjectKey, setSelectedHistoryObjectKey] = useState<string | null>(null);
+  const [positivePrompt, setPositivePrompt] = useState('')
+  const [imgWidth, setImgWidth] = useState(1024)
+  const [imgHeight, setImgHeight] = useState(1024)
+  const [img2imgSourceMode, setImg2imgSourceMode] = useState<Img2ImgSourceMode>('upload')
+  const [sourceImage, setSourceImage] = useState<File | null>(null)
+  const [generatedImages, setGeneratedImages] = useState<GeneratedImageOut[]>([])
+  const [loadingGeneratedImages, setLoadingGeneratedImages] = useState(false)
+  const [selectedHistoryObjectKey, setSelectedHistoryObjectKey] = useState<string | null>(null)
 
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [resultImage, setResultImage] = useState<string | null>(null);
-  const [revisedPrompt, setRevisedPrompt] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [isGenerating, setIsGenerating] = useState(false)
+  const [resultImage, setResultImage] = useState<string | null>(null)
+  const [revisedPrompt, setRevisedPrompt] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     const init = async () => {
       try {
-        const toolsData = await ImageToolsService.listImageTools();
-        setTools(toolsData);
+        const toolsData = await ImageToolsService.listImageTools()
+        setTools(toolsData)
         if (toolsData.length > 0) {
-          setSelectedToolId(toolsData[0].id);
+          setSelectedToolId(toolsData[0].id)
         }
       } catch (e) {
-        console.error('初始化失败:', e);
+        console.error('初始化失败:', e)
       } finally {
-        setLoadingInit(false);
+        setLoadingInit(false)
       }
-    };
-    init();
-  }, []);
+    }
+    void init()
+  }, [])
 
   useEffect(() => {
-    if (mode !== 'img2img' || img2imgSourceMode !== 'history') return;
+    if (mode !== 'img2img' || img2imgSourceMode !== 'history') return
     const loadGeneratedImages = async () => {
-      setLoadingGeneratedImages(true);
+      setLoadingGeneratedImages(true)
       try {
-        const page = await GeneratedImagesService.listGeneratedImagesApiV1GeneratedImagesGet(1, 20);
-        setGeneratedImages(page.items ?? []);
+        const page = await GeneratedImagesService.listGeneratedImagesApiV1GeneratedImagesGet(1, 20)
+        setGeneratedImages(page.items ?? [])
       } catch (e) {
-        console.error('加载历史生成图失败:', e);
-        setGeneratedImages([]);
+        console.error('加载历史生成图失败:', e)
+        setGeneratedImages([])
       } finally {
-        setLoadingGeneratedImages(false);
+        setLoadingGeneratedImages(false)
       }
-    };
-    loadGeneratedImages();
-  }, [mode, img2imgSourceMode]);
+    }
+    void loadGeneratedImages()
+  }, [mode, img2imgSourceMode])
 
   useEffect(() => {
     if (availableTools.length === 0) {
-      setSelectedToolId(null);
-      return;
+      setSelectedToolId(null)
+      return
     }
-    if (!selectedToolId || !availableTools.some(t => t.id === selectedToolId)) {
-      setSelectedToolId(availableTools[0].id);
+    if (!selectedToolId || !availableTools.some((t) => t.id === selectedToolId)) {
+      setSelectedToolId(availableTools[0].id)
     }
-  }, [availableTools, selectedToolId]);
+  }, [availableTools, selectedToolId])
 
   const handleGenerate = async () => {
-    if (!selectedToolId || !positivePrompt.trim()) return;
-    setIsGenerating(true);
-    setError(null);
-    setResultImage(null);
-    setRevisedPrompt(null);
+    if (!selectedToolId || !positivePrompt.trim()) return
+    setIsGenerating(true)
+    setError(null)
+    setResultImage(null)
+    setRevisedPrompt(null)
     try {
-      const w = imgWidth;
-      const h = imgHeight;
-      const res = mode === 'img2img'
-        ? (
-          img2imgSourceMode === 'history'
+      const w = imgWidth
+      const h = imgHeight
+      const res =
+        mode === 'img2img'
+          ? img2imgSourceMode === 'history'
             ? await ImageToolsService.img2ImgByReference(selectedToolId, {
-              prompt: positivePrompt,
-              width: w,
-              height: h,
-              object_key: selectedHistoryObjectKey,
-            })
+                prompt: positivePrompt,
+                width: w,
+                height: h,
+                object_key: selectedHistoryObjectKey,
+              })
             : await ImageToolsService.img2ImgApiV1ImageToolsToolIdImg2ImgPost(selectedToolId, {
+                prompt: positivePrompt,
+                width: w,
+                height: h,
+                image: sourceImage as Blob,
+              })
+          : await ImageToolsService.generateImage(selectedToolId, {
               prompt: positivePrompt,
               width: w,
               height: h,
-              image: sourceImage as Blob,
             })
-        )
-        : await ImageToolsService.generateImage(selectedToolId, {
-          prompt: positivePrompt,
-          width: w,
-          height: h,
-        });
-      setResultImage(res.image_url);
-      setRevisedPrompt(res.revised_prompt ?? null);
+      setResultImage(res.image_url)
+      setRevisedPrompt(res.revised_prompt ?? null)
     } catch (e: unknown) {
-      setError((mode === 'img2img' ? '编辑失败: ' : '生成失败: ') + String(e));
+      setError((mode === 'img2img' ? '编辑失败: ' : '生成失败: ') + String(e))
     } finally {
-      setIsGenerating(false);
+      setIsGenerating(false)
     }
-  };
+  }
 
   const handleDownload = () => {
-    if (!resultImage) return;
-    const a = document.createElement('a');
-    a.href = resultImage;
-    a.download = `generated_${Date.now()}.png`;
-    a.click();
-  };
+    if (!resultImage) return
+    const a = document.createElement('a')
+    a.href = resultImage
+    a.download = `generated_${Date.now()}.png`
+    a.click()
+  }
 
-  const inputClass = 'w-full px-4 py-2.5 bg-gray-100 dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-xl text-gray-800 placeholder-gray-500 outline-none focus:ring-2 focus:ring-gray-400 dark:focus:ring-zinc-500/50 text-sm';
-  const selectClass = 'w-full px-4 py-2.5 bg-gray-100 dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-xl text-gray-800 outline-none focus:ring-2 focus:ring-gray-400 dark:focus:ring-zinc-500/50 text-sm';
-  const labelClass = 'block text-xs font-medium text-gray-600 mb-1.5 uppercase tracking-wide';
+  const inputClass =
+    'w-full px-4 py-2.5 bg-gray-100 dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-xl text-gray-800 placeholder-gray-500 outline-none focus:ring-2 focus:ring-gray-400 dark:focus:ring-zinc-500/50 text-sm'
+  const selectClass =
+    'w-full px-4 py-2.5 bg-gray-100 dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-xl text-gray-800 outline-none focus:ring-2 focus:ring-gray-400 dark:focus:ring-zinc-500/50 text-sm'
+  const labelClass = 'block text-xs font-medium text-gray-600 mb-1.5 uppercase tracking-wide'
 
   if (loadingInit) {
     return (
       <div className="flex items-center justify-center h-full">
         <Loader2 size={24} className="animate-spin text-gray-500" />
       </div>
-    );
+    )
   }
 
   return (
@@ -170,8 +171,10 @@ const ImageStudioPage: React.FC = () => {
           <div className="text-center py-20">
             <div className="text-5xl mb-4">🎨</div>
             <p className="text-gray-600 mb-2">尚未配置文生图模型</p>
-            <button onClick={() => navigate('/image-tools')}
-              className="mt-4 px-5 py-2.5 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-2xl hover:shadow-lg transition-all text-sm">
+            <button
+              onClick={() => navigate('/image-tools')}
+              className="mt-4 px-5 py-2.5 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-2xl hover:shadow-lg transition-all text-sm"
+            >
               前往配置
             </button>
           </div>
@@ -184,13 +187,13 @@ const ImageStudioPage: React.FC = () => {
                 <label className={labelClass}>生成模式</label>
                 <ThemedSelect
                   value={mode}
-                  onChange={v => {
-                    setMode(v as GenerationMode);
-                    setImg2imgSourceMode('upload');
-                    setSourceImage(null);
-                    setSelectedHistoryObjectKey(null);
-                    setResultImage(null);
-                    setError(null);
+                  onChange={(v) => {
+                    setMode(v as GenerationMode)
+                    setImg2imgSourceMode('upload')
+                    setSourceImage(null)
+                    setSelectedHistoryObjectKey(null)
+                    setResultImage(null)
+                    setError(null)
                   }}
                   options={[
                     { value: 'txt2img', label: '文生图' },
@@ -202,20 +205,29 @@ const ImageStudioPage: React.FC = () => {
 
               {/* Tool selector */}
               <div>
-                <label className={labelClass}>{mode === 'img2img' ? '图生图模型' : '文生图模型'}</label>
+                <label className={labelClass}>
+                  {mode === 'img2img' ? '图生图模型' : '文生图模型'}
+                </label>
                 <ThemedSelect
                   value={selectedToolId ?? ''}
-                  onChange={v => {
-                    const id = Number(v);
-                    setSelectedToolId(id);
-                    const tool = availableTools.find(t => t.id === id);
-                    const dim = tool?.provider === 'aliyun' ? 2048 : 1024;
-                    setImgWidth(dim);
-                    setImgHeight(dim);
+                  onChange={(v) => {
+                    const id = Number(v)
+                    setSelectedToolId(id)
+                    const tool = availableTools.find((t) => t.id === id)
+                    const dim = tool?.provider === 'aliyun' ? 2048 : 1024
+                    setImgWidth(dim)
+                    setImgHeight(dim)
                   }}
-                  options={availableTools.map(t => ({
+                  options={availableTools.map((t) => ({
                     value: t.id,
-                    label: (t.provider === 'openai' ? 'DALL-E' : t.provider === 'siliconflow' ? 'SiliconFlow' : t.provider === 'aliyun' ? '阿里云（千问）' : 'Stability AI') + (t.model ? ' / ' + t.model : ''),
+                    label:
+                      (t.provider === 'openai'
+                        ? 'DALL-E'
+                        : t.provider === 'siliconflow'
+                          ? 'SiliconFlow'
+                          : t.provider === 'aliyun'
+                            ? '阿里云（千问）'
+                            : 'Stability AI') + (t.model ? ' / ' + t.model : ''),
                   }))}
                   className={selectClass}
                 />
@@ -231,10 +243,10 @@ const ImageStudioPage: React.FC = () => {
                   <label className={labelClass}>原图来源</label>
                   <ThemedSelect
                     value={img2imgSourceMode}
-                    onChange={v => {
-                      setImg2imgSourceMode(v as Img2ImgSourceMode);
-                      setSourceImage(null);
-                      setSelectedHistoryObjectKey(null);
+                    onChange={(v) => {
+                      setImg2imgSourceMode(v as Img2ImgSourceMode)
+                      setSourceImage(null)
+                      setSelectedHistoryObjectKey(null)
                     }}
                     options={[
                       { value: 'upload', label: '上传文件' },
@@ -251,13 +263,11 @@ const ImageStudioPage: React.FC = () => {
                   <input
                     type="file"
                     accept="image/*"
-                    onChange={e => setSourceImage(e.target.files?.[0] ?? null)}
+                    onChange={(e) => setSourceImage(e.target.files?.[0] ?? null)}
                     className={inputClass}
                   />
                   {sourceImage && (
-                    <p className="text-xs text-gray-500 mt-1">
-                      已选择：{sourceImage.name}
-                    </p>
+                    <p className="text-xs text-gray-500 mt-1">已选择：{sourceImage.name}</p>
                   )}
                 </div>
               )}
@@ -275,14 +285,16 @@ const ImageStudioPage: React.FC = () => {
                   ) : (
                     <div className="grid grid-cols-4 gap-2 max-h-44 overflow-y-auto p-1 bg-gray-50 dark:bg-zinc-900 rounded-xl border border-gray-200 dark:border-zinc-800">
                       {generatedImages.map((img) => {
-                        const active = selectedHistoryObjectKey === img.object_key;
+                        const active = selectedHistoryObjectKey === img.object_key
                         return (
                           <button
                             key={img.id}
                             type="button"
                             onClick={() => setSelectedHistoryObjectKey(img.object_key)}
                             className={`rounded-lg overflow-hidden border-2 transition ${
-                              active ? 'border-cyan-400 shadow-md' : 'border-transparent hover:border-white/50'
+                              active
+                                ? 'border-cyan-400 shadow-md'
+                                : 'border-transparent hover:border-white/50'
                             }`}
                             title={img.prompt}
                           >
@@ -293,7 +305,7 @@ const ImageStudioPage: React.FC = () => {
                               loading="lazy"
                             />
                           </button>
-                        );
+                        )
                       })}
                     </div>
                   )}
@@ -308,7 +320,7 @@ const ImageStudioPage: React.FC = () => {
                 <label className={labelClass}>正向提示词</label>
                 <textarea
                   value={positivePrompt}
-                  onChange={e => setPositivePrompt(e.target.value)}
+                  onChange={(e) => setPositivePrompt(e.target.value)}
                   placeholder="high quality, detailed, photorealistic..."
                   rows={4}
                   className={inputClass + ' resize-none'}
@@ -319,17 +331,20 @@ const ImageStudioPage: React.FC = () => {
               <div>
                 <label className={labelClass}>尺寸</label>
                 <div className="flex flex-wrap gap-2 mb-3">
-                  {ASPECT_RATIO_PRESETS.map(preset => {
-                    const isActive = imgWidth === preset.width && imgHeight === preset.height;
-                    const maxBox = 14;
-                    const ratio = preset.width / preset.height;
-                    const bw = ratio >= 1 ? maxBox : Math.round(maxBox * ratio);
-                    const bh = ratio < 1 ? maxBox : Math.round(maxBox / ratio);
+                  {ASPECT_RATIO_PRESETS.map((preset) => {
+                    const isActive = imgWidth === preset.width && imgHeight === preset.height
+                    const maxBox = 14
+                    const ratio = preset.width / preset.height
+                    const bw = ratio >= 1 ? maxBox : Math.round(maxBox * ratio)
+                    const bh = ratio < 1 ? maxBox : Math.round(maxBox / ratio)
                     return (
                       <button
                         key={preset.label}
                         type="button"
-                        onClick={() => { setImgWidth(preset.width); setImgHeight(preset.height); }}
+                        onClick={() => {
+                          setImgWidth(preset.width)
+                          setImgHeight(preset.height)
+                        }}
                         className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-medium transition-all ${
                           isActive
                             ? 'bg-gray-900 dark:bg-white border-gray-900 dark:border-white text-white dark:text-gray-900'
@@ -342,7 +357,7 @@ const ImageStudioPage: React.FC = () => {
                         />
                         {preset.label}
                       </button>
-                    );
+                    )
                   })}
                 </div>
                 <div className="flex items-center gap-2">
@@ -354,7 +369,7 @@ const ImageStudioPage: React.FC = () => {
                       max={4096}
                       step={64}
                       value={imgWidth}
-                      onChange={e => setImgWidth(Math.max(64, Number(e.target.value)))}
+                      onChange={(e) => setImgWidth(Math.max(64, Number(e.target.value)))}
                       className={inputClass}
                     />
                   </div>
@@ -367,7 +382,7 @@ const ImageStudioPage: React.FC = () => {
                       max={4096}
                       step={64}
                       value={imgHeight}
-                      onChange={e => setImgHeight(Math.max(64, Number(e.target.value)))}
+                      onChange={(e) => setImgHeight(Math.max(64, Number(e.target.value)))}
                       className={inputClass}
                     />
                   </div>
@@ -378,21 +393,27 @@ const ImageStudioPage: React.FC = () => {
               <button
                 onClick={handleGenerate}
                 disabled={
-                  isGenerating
-                  || !selectedToolId
-                  || !positivePrompt.trim()
-                  || (
-                    mode === 'img2img'
-                    && (
-                      (img2imgSourceMode === 'upload' && !sourceImage)
-                      || (img2imgSourceMode === 'history' && !selectedHistoryObjectKey)
-                    )
-                  )
+                  isGenerating ||
+                  !selectedToolId ||
+                  !positivePrompt.trim() ||
+                  (mode === 'img2img' &&
+                    ((img2imgSourceMode === 'upload' && !sourceImage) ||
+                      (img2imgSourceMode === 'history' && !selectedHistoryObjectKey)))
                 }
                 className="w-full py-3 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-2xl  hover:scale-[1.02] transition-all disabled:opacity-50 flex items-center justify-center gap-2 font-medium"
               >
-                {isGenerating ? <Loader2 size={18} className="animate-spin" /> : <ImageIcon size={18} />}
-                {isGenerating ? (mode === 'img2img' ? '编辑中...' : '生成中...') : (mode === 'img2img' ? '编辑图片' : '生成图片')}
+                {isGenerating ? (
+                  <Loader2 size={18} className="animate-spin" />
+                ) : (
+                  <ImageIcon size={18} />
+                )}
+                {isGenerating
+                  ? mode === 'img2img'
+                    ? '编辑中...'
+                    : '生成中...'
+                  : mode === 'img2img'
+                    ? '编辑图片'
+                    : '生成图片'}
               </button>
 
               {error && (
@@ -404,11 +425,15 @@ const ImageStudioPage: React.FC = () => {
 
             {/* Right: Result */}
             <div className="bg-white dark:bg-zinc-900 rounded-xl p-6 border border-gray-200 dark:border-zinc-700 flex flex-col">
-              <h3 className="text-sm font-medium text-gray-600 uppercase tracking-wide mb-4">生成结果</h3>
+              <h3 className="text-sm font-medium text-gray-600 uppercase tracking-wide mb-4">
+                生成结果
+              </h3>
               {isGenerating ? (
                 <div className="flex-1 flex flex-col items-center justify-center gap-3 text-gray-500">
                   <Loader2 size={40} className="animate-spin text-gray-600 dark:text-zinc-300" />
-                  <p className="text-sm">{mode === 'img2img' ? '正在编辑图像，请稍候...' : '正在生成图像，请稍候...'}</p>
+                  <p className="text-sm">
+                    {mode === 'img2img' ? '正在编辑图像，请稍候...' : '正在生成图像，请稍候...'}
+                  </p>
                 </div>
               ) : resultImage ? (
                 <div className="flex-1 flex flex-col gap-4">
@@ -436,9 +461,9 @@ const ImageStudioPage: React.FC = () => {
                   </div>
                   <p className="text-sm">
                     {mode === 'img2img'
-                      ? (img2imgSourceMode === 'history'
+                      ? img2imgSourceMode === 'history'
                         ? '选择历史图片并输入提示词后点击「编辑图片」'
-                        : '上传原图并输入提示词后点击「编辑图片」')
+                        : '上传原图并输入提示词后点击「编辑图片」'
                       : '输入提示词后点击「生成图片」'}
                   </p>
                 </div>
@@ -448,7 +473,7 @@ const ImageStudioPage: React.FC = () => {
         )}
       </div>
     </div>
-  );
-};
+  )
+}
 
-export default ImageStudioPage;
+export default ImageStudioPage

@@ -1,79 +1,96 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { ArrowLeft, Trash2, Download, ChevronLeft, ChevronRight, X, ImageIcon, Loader2 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
-import type { GeneratedImageOut } from '../api';
-import { GeneratedImagesService } from '../api';
+import React, { useState, useEffect, useCallback } from 'react'
+import {
+  ArrowLeft,
+  Trash2,
+  Download,
+  ChevronLeft,
+  ChevronRight,
+  X,
+  ImageIcon,
+  Loader2,
+} from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+import type { GeneratedImageOut } from '../api'
+import { GeneratedImagesService } from '../api'
 
-const PAGE_SIZE = 20;
+const PAGE_SIZE = 20
 
 const PROVIDER_LABEL: Record<string, string> = {
   openai: 'DALL-E',
   stability: 'Stability AI',
   siliconflow: 'SiliconFlow',
-};
+}
 
 const ImageGalleryPage: React.FC = () => {
-  const navigate = useNavigate();
+  const navigate = useNavigate()
 
-  const [images, setImages] = useState<GeneratedImageOut[]>([]);
-  const [total, setTotal] = useState(0);
-  const [page, setPage] = useState(1);
-  const [loading, setLoading] = useState(true);
-  const [selected, setSelected] = useState<GeneratedImageOut | null>(null);
-  const [deleting, setDeleting] = useState(false);
+  const [images, setImages] = useState<GeneratedImageOut[]>([])
+  const [total, setTotal] = useState(0)
+  const [page, setPage] = useState(1)
+  const [loading, setLoading] = useState(true)
+  const [selected, setSelected] = useState<GeneratedImageOut | null>(null)
+  const [deleting, setDeleting] = useState(false)
 
-  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
 
   const fetchImages = useCallback(async (pg: number) => {
-    setLoading(true);
+    setLoading(true)
     try {
-      const data = await GeneratedImagesService.listGeneratedImagesApiV1GeneratedImagesGet(pg, PAGE_SIZE);
-      setImages(data.items);
-      setTotal(data.total);
+      const data = await GeneratedImagesService.listGeneratedImagesApiV1GeneratedImagesGet(
+        pg,
+        PAGE_SIZE
+      )
+      setImages(data.items)
+      setTotal(data.total)
     } catch (e) {
-      console.error('加载失败:', e);
+      console.error('加载失败:', e)
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  }, []);
+  }, [])
 
   useEffect(() => {
-    fetchImages(page);
-  }, [page, fetchImages]);
+    void fetchImages(page)
+  }, [page, fetchImages])
 
   const handleDelete = async (id: number) => {
-    setDeleting(true);
+    setDeleting(true)
     try {
-      await GeneratedImagesService.deleteGeneratedImageApiV1GeneratedImagesRecordIdDelete(id);
-      setSelected(null);
+      await GeneratedImagesService.deleteGeneratedImageApiV1GeneratedImagesRecordIdDelete(id)
+      setSelected(null)
       // Refresh: if we deleted the last item on a non-first page, go back
-      const newTotal = total - 1;
-      const newTotalPages = Math.max(1, Math.ceil(newTotal / PAGE_SIZE));
-      const targetPage = page > newTotalPages ? newTotalPages : page;
-      setTotal(newTotal);
+      const newTotal = total - 1
+      const newTotalPages = Math.max(1, Math.ceil(newTotal / PAGE_SIZE))
+      const targetPage = page > newTotalPages ? newTotalPages : page
+      setTotal(newTotal)
       if (targetPage !== page) {
-        setPage(targetPage);
+        setPage(targetPage)
       } else {
-        fetchImages(page);
+        void fetchImages(page)
       }
     } catch (e) {
-      console.error('删除失败:', e);
+      console.error('删除失败:', e)
     } finally {
-      setDeleting(false);
+      setDeleting(false)
     }
-  };
+  }
 
   const handleDownload = (img: GeneratedImageOut) => {
-    const a = document.createElement('a');
-    a.href = img.image_url;
-    a.download = `generated_${img.id}.png`;
-    a.click();
-  };
+    const a = document.createElement('a')
+    a.href = img.image_url
+    a.download = `generated_${img.id}.png`
+    a.click()
+  }
 
   const formatDate = (dateStr: string) => {
-    const d = new Date(dateStr);
-    return d.toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
-  };
+    const d = new Date(dateStr)
+    return d.toLocaleString('zh-CN', {
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+    })
+  }
 
   return (
     <div className="p-6 overflow-y-auto h-full">
@@ -127,12 +144,12 @@ const ImageGalleryPage: React.FC = () => {
                       className="w-full h-full object-cover"
                       loading="lazy"
                       onError={(e) => {
-                        const t = e.currentTarget;
+                        const t = e.currentTarget
                         if (!t.dataset.fallback) {
-                          t.dataset.fallback = '1';
-                          t.src = img.image_url ?? '';
+                          t.dataset.fallback = '1'
+                          t.src = img.image_url ?? ''
                         } else {
-                          t.style.display = 'none';
+                          t.style.display = 'none'
                         }
                       }}
                     />
@@ -166,7 +183,9 @@ const ImageGalleryPage: React.FC = () => {
                 >
                   <ChevronLeft size={16} className="text-gray-700" />
                 </button>
-                <span className="text-sm text-gray-700">{page} / {totalPages}</span>
+                <span className="text-sm text-gray-700">
+                  {page} / {totalPages}
+                </span>
                 <button
                   onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                   disabled={page === totalPages}
@@ -202,9 +221,14 @@ const ImageGalleryPage: React.FC = () => {
                     图片编辑
                   </span>
                 )}
-                <p className="text-xs text-gray-500 mt-0.5">{new Date(selected.created_at).toLocaleString('zh-CN')}</p>
+                <p className="text-xs text-gray-500 mt-0.5">
+                  {new Date(selected.created_at).toLocaleString('zh-CN')}
+                </p>
               </div>
-              <button onClick={() => setSelected(null)} className="p-2 hover:bg-gray-100 dark:hover:bg-zinc-700 rounded-xl transition">
+              <button
+                onClick={() => setSelected(null)}
+                className="p-2 hover:bg-gray-100 dark:hover:bg-zinc-700 rounded-xl transition"
+              >
                 <X size={18} className="text-gray-700" />
               </button>
             </div>
@@ -212,7 +236,11 @@ const ImageGalleryPage: React.FC = () => {
             {/* Image */}
             <div className="p-5">
               <div className="rounded-2xl overflow-hidden border border-gray-200 dark:border-zinc-800 shadow-lg mb-4">
-                <img src={selected.image_url} alt={selected.prompt} className="w-full object-contain" />
+                <img
+                  src={selected.image_url}
+                  alt={selected.prompt}
+                  className="w-full object-contain"
+                />
               </div>
 
               {/* Prompt */}
@@ -224,13 +252,19 @@ const ImageGalleryPage: React.FC = () => {
 
                 {selected.revised_prompt && (
                   <div className="p-3 bg-gray-50 dark:bg-zinc-900 rounded-xl border border-gray-200 dark:border-zinc-800">
-                    <p className="text-xs text-gray-500 mb-1 uppercase tracking-wide">AI 修订提示词</p>
-                    <p className="text-sm text-gray-700 leading-relaxed">{selected.revised_prompt}</p>
+                    <p className="text-xs text-gray-500 mb-1 uppercase tracking-wide">
+                      AI 修订提示词
+                    </p>
+                    <p className="text-sm text-gray-700 leading-relaxed">
+                      {selected.revised_prompt}
+                    </p>
                   </div>
                 )}
 
                 {(selected.width || selected.height) && (
-                  <p className="text-xs text-gray-500">尺寸：{selected.width} × {selected.height}</p>
+                  <p className="text-xs text-gray-500">
+                    尺寸：{selected.width} × {selected.height}
+                  </p>
                 )}
               </div>
 
@@ -257,7 +291,7 @@ const ImageGalleryPage: React.FC = () => {
         </div>
       )}
     </div>
-  );
-};
+  )
+}
 
-export default ImageGalleryPage;
+export default ImageGalleryPage

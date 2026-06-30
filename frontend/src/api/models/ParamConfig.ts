@@ -3,10 +3,10 @@
 /* tslint:disable */
 /* eslint-disable */
 export type ParamConfig = {
-    name: string;
-    path: string;
-    type: 'string' | 'integer' | 'number' | 'boolean';
-    description: string;
-    required?: boolean;
-    default?: any;
-};
+  name: string
+  path: string
+  type: 'string' | 'integer' | 'number' | 'boolean'
+  description: string
+  required?: boolean
+  default?: any
+}

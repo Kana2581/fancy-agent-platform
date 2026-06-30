@@ -1,71 +1,69 @@
-import React, { useEffect, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
-import { Bot, AlertTriangle } from 'lucide-react';
-import type { SharedSessionView } from '../api';
-import { SessionSharesService } from '../api';
-import { MessageBubble } from '../components/Message';
+import React, { useEffect, useState } from 'react'
+import { Link, useParams } from 'react-router-dom'
+import { Bot, AlertTriangle } from 'lucide-react'
+import type { SharedSessionView } from '../api'
+import { SessionSharesService } from '../api'
+import { MessageBubble } from '../components/Message'
 
 type SharedContentItem = {
-  type?: string;
-  text?: string;
-  image_url?: { url?: string } | string;
-};
+  type?: string
+  text?: string
+  image_url?: { url?: string } | string
+}
 
 const contentToString = (content: unknown): string => {
-  if (content == null) return '';
-  if (typeof content === 'string') return content;
+  if (content == null) return ''
+  if (typeof content === 'string') return content
   if (Array.isArray(content)) {
     return content
       .map((raw): string => {
-        if (typeof raw === 'string') return raw;
-        const item = raw as SharedContentItem;
-        if (item?.type === 'text' && typeof item?.text === 'string') return item.text;
+        if (typeof raw === 'string') return raw
+        const item = raw as SharedContentItem
+        if (item?.type === 'text' && typeof item?.text === 'string') return item.text
         if (item?.type === 'image_url') {
-          const url = typeof item.image_url === 'string' ? item.image_url : item.image_url?.url;
-          return url ? `![image](${url})` : '';
+          const url = typeof item.image_url === 'string' ? item.image_url : item.image_url?.url
+          return url ? `![image](${url})` : ''
         }
-        return '';
+        return ''
       })
       .filter(Boolean)
-      .join('\n\n');
+      .join('\n\n')
   }
   try {
-    return JSON.stringify(content);
+    return JSON.stringify(content)
   } catch {
-    return String(content);
+    return '[non-serializable]'
   }
-};
+}
 
 const SharedSessionPage: React.FC = () => {
-  const { slug } = useParams<{ slug: string }>();
-  const [view, setView] = useState<SharedSessionView | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
+  const { slug } = useParams<{ slug: string }>()
+  const [view, setView] = useState<SharedSessionView | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    if (!slug) return;
-    let cancelled = false;
-    (async () => {
+    if (!slug) return
+    let cancelled = false
+    void (async () => {
       try {
-        const data = await SessionSharesService.viewShared(slug);
-        if (!cancelled) setView(data);
+        const data = await SessionSharesService.viewShared(slug)
+        if (!cancelled) setView(data)
       } catch (e) {
-        console.error(e);
+        console.error(e)
         if (!cancelled) {
-          const err = e as { status?: number; response?: { status?: number } };
-          const status = err?.status ?? err?.response?.status;
-          setError(
-            status === 410
-              ? '该分享链接已失效或已过期。'
-              : '加载分享内容失败。',
-          );
+          const err = e as { status?: number; response?: { status?: number } }
+          const status = err?.status ?? err?.response?.status
+          setError(status === 410 ? '该分享链接已失效或已过期。' : '加载分享内容失败。')
         }
       } finally {
-        if (!cancelled) setLoading(false);
+        if (!cancelled) setLoading(false)
       }
-    })();
-    return () => { cancelled = true; };
-  }, [slug]);
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [slug])
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -104,7 +102,7 @@ const SharedSessionPage: React.FC = () => {
           </div>
         ) : (
           <div className="space-y-6">
-            {view?.messages.map(msg => (
+            {view?.messages.map((msg) => (
               <MessageBubble
                 key={msg.id}
                 type={msg.type}
@@ -116,11 +114,14 @@ const SharedSessionPage: React.FC = () => {
         )}
 
         <footer className="mt-10 pt-6 border-t border-gray-200 dark:border-zinc-700 text-center text-xs text-gray-500">
-          由 Fancy Agent 分享 · <Link to="/" className="underline hover:text-gray-700">访问平台</Link>
+          由 Fancy Agent 分享 ·{' '}
+          <Link to="/" className="underline hover:text-gray-700">
+            访问平台
+          </Link>
         </footer>
       </div>
     </div>
-  );
-};
+  )
+}
 
-export default SharedSessionPage;
+export default SharedSessionPage
