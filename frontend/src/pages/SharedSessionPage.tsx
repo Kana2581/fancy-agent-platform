@@ -3,7 +3,7 @@ import { Link, useParams } from 'react-router-dom'
 import { Bot, AlertTriangle } from 'lucide-react'
 import type { SharedSessionView } from '../api'
 import { SessionSharesService } from '../api'
-import { MessageBubble } from '../components/Message'
+import { MessageBubble } from '../components/message'
 
 type SharedContentItem = {
   type?: string

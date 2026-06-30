@@ -43,7 +43,7 @@ import {
   SessionSharesService,
 } from '../api'
 import { CancelError } from '../api/core/CancelablePromise'
-import { MessageBubble } from '../components/Message'
+import { MessageBubble } from '../components/message'
 import IntermediateGroup from '../components/IntermediateGroup'
 import { useMessageHandler } from '../hooks/useMessageHandler'
 import { useAppContext } from '../context/AppContext'
