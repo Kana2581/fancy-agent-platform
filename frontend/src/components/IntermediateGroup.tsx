@@ -1,10 +1,11 @@
-import React, { useState } from 'react'
+import React from 'react'
 import { ChevronDown, ChevronRight, Wrench } from 'lucide-react'
 import type { ChatResponse } from '../api'
 
 interface IntermediateGroupProps {
   messages: ChatResponse[]
-  defaultCollapsed: boolean
+  expanded: boolean
+  onToggle: () => void
   renderMessage: (msg: ChatResponse) => React.ReactNode
 }
 
@@ -25,10 +26,10 @@ const extractToolNames = (messages: ChatResponse[]): string[] => {
 
 const IntermediateGroup: React.FC<IntermediateGroupProps> = ({
   messages,
-  defaultCollapsed,
+  expanded,
+  onToggle,
   renderMessage,
 }) => {
-  const [expanded, setExpanded] = useState(!defaultCollapsed)
   const toolNames = extractToolNames(messages)
   const summary = toolNames.length > 0 ? toolNames.join(', ') : '工具调用'
 
@@ -39,7 +40,7 @@ const IntermediateGroup: React.FC<IntermediateGroupProps> = ({
       </div>
       <div className="flex-1 min-w-0">
         <button
-          onClick={() => setExpanded((v) => !v)}
+          onClick={onToggle}
           className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl border border-cyan-400/30 bg-cyan-400/10 hover:bg-cyan-400/20 text-cyan-700 dark:text-cyan-300 text-sm transition-all max-w-full"
           title={expanded ? '收起中间过程' : '展开中间过程'}
         >

@@ -90,6 +90,7 @@ const ChatPage: React.FC = () => {
   // 切换会话时复位临时覆盖
   useEffect(() => {
     setOverrideShowAll(false)
+    setExpandedIntermediateGroups({})
   }, [sessionId])
 
   // 输入框自动伸缩
@@ -110,6 +111,9 @@ const ChatPage: React.FC = () => {
   const [enabledApiToolIds, setEnabledApiToolIds] = useState<number[]>([])
   const [enabledImageToolIds, setEnabledImageToolIds] = useState<number[]>([])
   const [enabledBuiltinTypes, setEnabledBuiltinTypes] = useState<string[]>([])
+  const [expandedIntermediateGroups, setExpandedIntermediateGroups] = useState<
+    Record<string, boolean>
+  >({})
   const toolPanelRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const [isDraggingOver, setIsDraggingOver] = useState(false)
@@ -197,30 +201,32 @@ const ChatPage: React.FC = () => {
       AgentBuiltinToolsService.listAgentBuiltinToolsApiV1AgentsAgentIdBuiltinToolsGet(
         selectedAgent.id
       ),
-    ]).then(
-      ([
-        allMcps,
-        allApiTools,
-        allImageTools,
-        allBuiltins,
-        mcpIds,
-        apiToolIds,
-        imageToolIds,
-        builtinTypes,
-      ]) => {
-        setAvailableMcps(allMcps.filter((m) => m.is_enabled))
-        setAvailableApiTools(allApiTools)
-        setAvailableImageTools(allImageTools)
-        setAvailableBuiltinTools(allBuiltins)
-        setEnabledMcpIds(mcpIds)
-        setEnabledApiToolIds(apiToolIds)
-        setEnabledImageToolIds(imageToolIds)
-        setEnabledBuiltinTypes(builtinTypes)
-        setEnabledMCPCount(
-          mcpIds.length + apiToolIds.length + imageToolIds.length + builtinTypes.length
-        )
-      }
-    )
+    ])
+      .then(
+        ([
+          allMcps,
+          allApiTools,
+          allImageTools,
+          allBuiltins,
+          mcpIds,
+          apiToolIds,
+          imageToolIds,
+          builtinTypes,
+        ]) => {
+          setAvailableMcps(allMcps.filter((m) => m.is_enabled))
+          setAvailableApiTools(allApiTools)
+          setAvailableImageTools(allImageTools)
+          setAvailableBuiltinTools(allBuiltins)
+          setEnabledMcpIds(mcpIds)
+          setEnabledApiToolIds(apiToolIds)
+          setEnabledImageToolIds(imageToolIds)
+          setEnabledBuiltinTypes(builtinTypes)
+        }
+      )
+      .catch((error) => {
+        console.error('load tool config failed:', error)
+        toast.error('Failed to load tool settings. Refresh and try again.')
+      })
   }, [selectedAgent])
 
   // Close tool panel on outside click
@@ -235,64 +241,108 @@ const ChatPage: React.FC = () => {
     return () => document.removeEventListener('mousedown', handler)
   }, [showToolPanel])
 
-  const updateEnabledCount = (
-    mcpIds: number[],
-    apiIds: number[],
-    imageIds: number[],
-    builtinTypes: string[]
-  ) => {
-    setEnabledMCPCount(mcpIds.length + apiIds.length + imageIds.length + builtinTypes.length)
-  }
+  useEffect(() => {
+    setEnabledMCPCount(
+      enabledMcpIds.length +
+        enabledApiToolIds.length +
+        enabledImageToolIds.length +
+        enabledBuiltinTypes.length
+    )
+  }, [enabledMcpIds, enabledApiToolIds, enabledImageToolIds, enabledBuiltinTypes])
 
   const toggleMcp = async (mcpId: number) => {
     if (!selectedAgent) return
-    const newIds = enabledMcpIds.includes(mcpId)
-      ? enabledMcpIds.filter((id) => id !== mcpId)
-      : [...enabledMcpIds, mcpId]
+    const prevIds = enabledMcpIds
+    const newIds = prevIds.includes(mcpId)
+      ? prevIds.filter((id) => id !== mcpId)
+      : [...prevIds, mcpId]
     setEnabledMcpIds(newIds)
-    updateEnabledCount(newIds, enabledApiToolIds, enabledImageToolIds, enabledBuiltinTypes)
-    await AgentMcpsService.bindMcpsApiV1AgentsAgentIdMcpsPost(selectedAgent.id, newIds)
+    try {
+      await AgentMcpsService.bindMcpsApiV1AgentsAgentIdMcpsPost(selectedAgent.id, newIds)
+    } catch (error) {
+      console.error('sync MCP tools failed:', error)
+      setEnabledMcpIds((currentIds) => {
+        const stillPendingRollback =
+          currentIds.length === newIds.length &&
+          currentIds.every((id, idx) => id === newIds[idx])
+        return stillPendingRollback ? prevIds : currentIds
+      })
+      toast.error('Failed to sync MCP tools. Please retry.')
+    }
   }
 
   const toggleApiTool = async (toolId: number) => {
     if (!selectedAgent) return
-    const newIds = enabledApiToolIds.includes(toolId)
-      ? enabledApiToolIds.filter((id) => id !== toolId)
-      : [...enabledApiToolIds, toolId]
+    const prevIds = enabledApiToolIds
+    const newIds = prevIds.includes(toolId)
+      ? prevIds.filter((id) => id !== toolId)
+      : [...prevIds, toolId]
     setEnabledApiToolIds(newIds)
-    updateEnabledCount(enabledMcpIds, newIds, enabledImageToolIds, enabledBuiltinTypes)
-    await AgentApiToolsService.syncAgentToolsApiV1AgentsAgentIdApiToolsPost(selectedAgent.id, {
-      tool_ids: newIds,
-    })
+    try {
+      await AgentApiToolsService.syncAgentToolsApiV1AgentsAgentIdApiToolsPost(selectedAgent.id, {
+        tool_ids: newIds,
+      })
+    } catch (error) {
+      console.error('sync API tools failed:', error)
+      setEnabledApiToolIds((currentIds) => {
+        const stillPendingRollback =
+          currentIds.length === newIds.length &&
+          currentIds.every((id, idx) => id === newIds[idx])
+        return stillPendingRollback ? prevIds : currentIds
+      })
+      toast.error('Failed to sync API tools. Please retry.')
+    }
   }
 
   const toggleImageTool = async (toolId: number) => {
     if (!selectedAgent) return
-    const newIds = enabledImageToolIds.includes(toolId)
-      ? enabledImageToolIds.filter((id) => id !== toolId)
-      : [...enabledImageToolIds, toolId]
+    const prevIds = enabledImageToolIds
+    const newIds = prevIds.includes(toolId)
+      ? prevIds.filter((id) => id !== toolId)
+      : [...prevIds, toolId]
     setEnabledImageToolIds(newIds)
-    updateEnabledCount(enabledMcpIds, enabledApiToolIds, newIds, enabledBuiltinTypes)
-    await AgentImageToolsService.syncAgentImageToolsApiV1AgentsAgentIdImageToolsPost(
-      selectedAgent.id,
-      { tool_ids: newIds }
-    )
+    try {
+      await AgentImageToolsService.syncAgentImageToolsApiV1AgentsAgentIdImageToolsPost(
+        selectedAgent.id,
+        { tool_ids: newIds }
+      )
+    } catch (error) {
+      console.error('sync image tools failed:', error)
+      setEnabledImageToolIds((currentIds) => {
+        const stillPendingRollback =
+          currentIds.length === newIds.length &&
+          currentIds.every((id, idx) => id === newIds[idx])
+        return stillPendingRollback ? prevIds : currentIds
+      })
+      toast.error('Failed to sync image tools. Please retry.')
+    }
   }
 
   const toggleBuiltinTool = async (toolType: string) => {
     if (!selectedAgent) return
-    const newTypes = enabledBuiltinTypes.includes(toolType)
-      ? enabledBuiltinTypes.filter((t) => t !== toolType)
-      : [...enabledBuiltinTypes, toolType]
+    const prevTypes = enabledBuiltinTypes
+    const newTypes = prevTypes.includes(toolType)
+      ? prevTypes.filter((t) => t !== toolType)
+      : [...prevTypes, toolType]
     setEnabledBuiltinTypes(newTypes)
-    updateEnabledCount(enabledMcpIds, enabledApiToolIds, enabledImageToolIds, newTypes)
-    await AgentBuiltinToolsService.syncAgentBuiltinToolsApiV1AgentsAgentIdBuiltinToolsPost(
-      selectedAgent.id,
-      { tool_types: newTypes }
-    )
+    try {
+      await AgentBuiltinToolsService.syncAgentBuiltinToolsApiV1AgentsAgentIdBuiltinToolsPost(
+        selectedAgent.id,
+        { tool_types: newTypes }
+      )
+    } catch (error) {
+      console.error('sync builtin tools failed:', error)
+      setEnabledBuiltinTypes((currentTypes) => {
+        const stillPendingRollback =
+          currentTypes.length === newTypes.length &&
+          currentTypes.every((type, idx) => type === newTypes[idx])
+        return stillPendingRollback ? prevTypes : currentTypes
+      })
+      toast.error('Failed to sync builtin tools. Please retry.')
+    }
   }
 
-  // ── 自动滚动 ──────────────────────────────────────────────────────────────
+  // Auto-scroll
 
   useEffect(() => {
     if (editingMessageId) return
@@ -598,23 +648,26 @@ const ChatPage: React.FC = () => {
                   if (buffer.length === 0) return
                   if (hideIntermediate) {
                     const groupMessages = buffer
-                    // 仍在流式过程中的最后一组：默认展开，便于观察 agent 工作
+                    const groupId = groupMessages[0].id
+                    // Keep the trailing in-flight group expanded while the agent is still working.
                     const defaultCollapsed = !(isLoading && isTrailing)
                     nodes.push(
                       <IntermediateGroup
-                        key={`group-${nodes.length}-${groupMessages[0].id ?? ''}`}
+                        key={groupId}
                         messages={groupMessages}
-                        defaultCollapsed={defaultCollapsed}
+                        expanded={expandedIntermediateGroups[groupId] ?? !defaultCollapsed}
+                        onToggle={() =>
+                          setExpandedIntermediateGroups((prev) => ({
+                            ...prev,
+                            [groupId]: !(prev[groupId] ?? !defaultCollapsed),
+                          }))
+                        }
                         renderMessage={renderMessage}
                       />
                     )
                   } else {
                     for (const m of buffer) {
-                      nodes.push(
-                        <React.Fragment key={`msg-${nodes.length}-${m.id ?? ''}`}>
-                          {renderMessage(m)}
-                        </React.Fragment>
-                      )
+                      nodes.push(<React.Fragment key={m.id}>{renderMessage(m)}</React.Fragment>)
                     }
                   }
                   buffer = []
@@ -625,11 +678,7 @@ const ChatPage: React.FC = () => {
                     buffer.push(msg)
                   } else {
                     flushBuffer(false)
-                    nodes.push(
-                      <React.Fragment key={`msg-${nodes.length}-${msg.id ?? ''}`}>
-                        {renderMessage(msg)}
-                      </React.Fragment>
-                    )
+                    nodes.push(<React.Fragment key={msg.id}>{renderMessage(msg)}</React.Fragment>)
                   }
                 }
                 flushBuffer(true)
@@ -1116,3 +1165,4 @@ const ChatPage: React.FC = () => {
 }
 
 export default ChatPage
+
