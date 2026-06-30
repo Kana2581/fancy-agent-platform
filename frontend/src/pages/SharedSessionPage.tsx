@@ -106,7 +106,6 @@ const SharedSessionPage: React.FC = () => {
               <MessageBubble
                 key={msg.id}
                 type={msg.type}
-                name={msg.name}
                 content={contentToString(msg.content)}
               />
             ))}

@@ -566,7 +566,6 @@ const ChatPage: React.FC = () => {
                 const renderMessage = (msg: ChatResponse) => (
                   <MessageBubble
                     type={msg.type}
-                    name={msg.name}
                     content={
                       typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content)
                     }

@@ -9,7 +9,6 @@ import type { ToolCallData, UsageMetadata } from './types'
 
 export const MessageBubble: React.FC<{
   type: string
-  name?: string | null
   content: string
   files?: SimpleFile[]
   toolCalls?: ToolCallData[]
