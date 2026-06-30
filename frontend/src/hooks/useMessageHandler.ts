@@ -276,60 +276,59 @@ export const useMessageHandler = ({
     )
   }
 
-  async function processStream(response: Response) {
-    if (!response.body) return
-
-    const reader = response.body.getReader()
+  async function readSseStream(
+    body: ReadableStream<Uint8Array>,
+    onEvent: (eventType: string, dataLine: string) => boolean
+  ): Promise<void> {
+    const reader = body.getReader()
     const decoder = new TextDecoder('utf-8')
     let buffer = ''
-
-    while (true) {
+    outer: while (true) {
       const { value, done } = await reader.read()
       if (done) break
-
       buffer += decoder.decode(value, { stream: true })
-      // Split on blank lines (SSE block separator)
       const blocks = buffer.split('\n\n')
       buffer = blocks.pop() || ''
-
       for (const block of blocks) {
         if (!block.trim()) continue
-
         let eventType = 'message'
         let dataLine = ''
-
         for (const line of block.split('\n')) {
-          if (line.startsWith('event:')) {
-            eventType = line.slice(6).trim()
-          } else if (line.startsWith('data:')) {
-            dataLine = line.slice(5).trim()
-          }
+          if (line.startsWith('event:')) eventType = line.slice(6).trim()
+          else if (line.startsWith('data:')) dataLine = line.slice(5).trim()
         }
-
         if (!dataLine) continue
-
-        if (eventType === 'done') {
-          return
-        } else if (eventType === 'error') {
-          const data = JSON.parse(dataLine)
-          setStreamError(data.message ?? '发生未知错误')
-          return
-        } else if (eventType === 'tool_approval_required') {
-          const data = JSON.parse(dataLine)
-          const aiMsg = allMessagesRef.current.find((m) => m.id === data.message_id)
-          setPendingApproval({
-            messageId: data.message_id,
-            toolCalls: aiMsg?.tool_calls ?? [],
-          })
-          setIsLoading(false)
-          return
-        } else if (eventType === 'session_title') {
-          refreshSessions()
-        } else {
-          handleStreamMessage(dataLine)
-        }
+        if (onEvent(eventType, dataLine)) break outer
       }
     }
+  }
+
+  async function processStream(response: Response) {
+    if (!response.body) return
+    await readSseStream(response.body, (eventType, dataLine) => {
+      if (eventType === 'done') return true
+      if (eventType === 'error') {
+        const data = JSON.parse(dataLine) as { message?: string }
+        setStreamError(data.message ?? '发生未知错误')
+        return true
+      }
+      if (eventType === 'tool_approval_required') {
+        const data = JSON.parse(dataLine) as { message_id: string }
+        const aiMsg = allMessagesRef.current.find((m) => m.id === data.message_id)
+        setPendingApproval({
+          messageId: data.message_id,
+          toolCalls: aiMsg?.tool_calls ?? [],
+        })
+        setIsLoading(false)
+        return true
+      }
+      if (eventType === 'session_title') {
+        refreshSessions()
+        return false
+      }
+      handleStreamMessage(dataLine)
+      return false
+    })
   }
 
   async function startChatStream(
@@ -597,52 +596,25 @@ export const useMessageHandler = ({
       })
 
       if (!res.body) return
-      const reader = res.body.getReader()
-      const decoder = new TextDecoder('utf-8')
-      let buffer = ''
-
-      streamLoop: while (true) {
-        const { value, done } = await reader.read()
-        if (done) break
-        buffer += decoder.decode(value, { stream: true })
-        const blocks = buffer.split('\n\n')
-        buffer = blocks.pop() || ''
-
-        for (const block of blocks) {
-          if (!block.trim()) continue
-          let eventType = 'message'
-          let dataLine = ''
-          for (const line of block.split('\n')) {
-            if (line.startsWith('event:')) eventType = line.slice(6).trim()
-            else if (line.startsWith('data:')) dataLine = line.slice(5).trim()
-          }
-          if (!dataLine) continue
-
-          if (eventType === 'done') break streamLoop
-          if (eventType === 'error') {
-            const data = JSON.parse(dataLine)
-            setStreamError(data.message ?? '压缩失败')
-            break streamLoop
-          }
-
-          try {
-            const parsed = JSON.parse(dataLine)
-            if (parsed.type !== 'AIMessageChunk') continue
-            const chunk = parsed.data
-            if (!chunk?.id) continue
-            compressMsgId = chunk.id
-            handleStreamChunk(
-              chunk.id,
-              'AIMessageChunk',
-              chunk.content,
-              undefined,
-              chunk.parent_id ?? null
-            )
-          } catch {
-            /* ignore malformed chunk */
-          }
+      await readSseStream(res.body, (eventType, dataLine) => {
+        if (eventType === 'done') return true
+        if (eventType === 'error') {
+          const data = JSON.parse(dataLine) as { message?: string }
+          setStreamError(data.message ?? '压缩失败')
+          return true
         }
-      }
+        try {
+          const parsed = JSON.parse(dataLine) as { type?: string; data?: { id?: string; content?: unknown; parent_id?: string | null } }
+          if (parsed.type !== 'AIMessageChunk') return false
+          const chunk = parsed.data
+          if (!chunk?.id) return false
+          compressMsgId = chunk.id
+          handleStreamChunk(chunk.id, 'AIMessageChunk', chunk.content, undefined, chunk.parent_id ?? null)
+        } catch {
+          /* ignore malformed chunk */
+        }
+        return false
+      })
 
       // 流式完成后,把激活路径收敛为只剩压缩消息——它的 parent_id=null,
       // 等价于"开新会话",与后端 get_ancestor_chain 行为一致。
