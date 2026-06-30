@@ -1,48 +1,50 @@
-import { BrowserRouter, Navigate, Outlet, Route, Routes } from 'react-router-dom';
-import { AppProvider } from './context/AppContext';
-import Layout from './components/Layout';
-import ChatPage from './pages/ChatPage';
-import AgentsPage from './pages/AgentsPage';
-import SettingsPage from './pages/SettingsPage';
-import LLMSettingsPage from './pages/LLMSettingsPage';
-import MCPSettingsPage from './pages/MCPSettingsPage';
-import MCPDetailPage from './pages/MCPDetailPage';
-import AuthPage from './pages/AuthPage';
-import ScheduledTasksPage from './pages/ScheduledTasksPage';
-import ApiToolsPage from './pages/ApiToolsPage';
-import ImageToolsPage from './pages/ImageToolsPage';
-import ImageStudioPage from './pages/ImageStudioPage';
-import ImageGalleryPage from './pages/ImageGalleryPage';
-import StatsPage from './pages/StatsPage';
-import PromptTemplatesPage from './pages/PromptTemplatesPage';
-import SkillsPage from './pages/SkillsPage';
-import MemoryPage from './pages/MemoryPage';
-import HelpPage from './pages/HelpPage';
-import KnowledgeGraphPage from './pages/KnowledgeGraphPage';
-import AgentWebhooksPage from './pages/AgentWebhooksPage';
-import PreferencesPage from './pages/PreferencesPage';
-import SharedSessionPage from './pages/SharedSessionPage';
-import { tokenManager } from './utils/TokenManager';
+import { BrowserRouter, Navigate, Outlet, Route, Routes } from 'react-router-dom'
+import { Toaster } from 'react-hot-toast'
+import { AppProvider } from './context/AppContext'
+import Layout from './components/Layout'
+import ChatPage from './pages/ChatPage'
+import AgentsPage from './pages/AgentsPage'
+import SettingsPage from './pages/SettingsPage'
+import LLMSettingsPage from './pages/LLMSettingsPage'
+import MCPSettingsPage from './pages/MCPSettingsPage'
+import MCPDetailPage from './pages/MCPDetailPage'
+import AuthPage from './pages/AuthPage'
+import ScheduledTasksPage from './pages/ScheduledTasksPage'
+import ApiToolsPage from './pages/ApiToolsPage'
+import ImageToolsPage from './pages/ImageToolsPage'
+import ImageStudioPage from './pages/ImageStudioPage'
+import ImageGalleryPage from './pages/ImageGalleryPage'
+import StatsPage from './pages/StatsPage'
+import PromptTemplatesPage from './pages/PromptTemplatesPage'
+import SkillsPage from './pages/SkillsPage'
+import MemoryPage from './pages/MemoryPage'
+import HelpPage from './pages/HelpPage'
+import KnowledgeGraphPage from './pages/KnowledgeGraphPage'
+import AgentWebhooksPage from './pages/AgentWebhooksPage'
+import PreferencesPage from './pages/PreferencesPage'
+import SharedSessionPage from './pages/SharedSessionPage'
+import { tokenManager } from './utils/TokenManager'
 
 const ProtectedRoutes = () => {
   if (!tokenManager.isAuthenticated()) {
-    return <Navigate to="/login" replace />;
+    return <Navigate to="/login" replace />
   }
 
-  return <Outlet />;
-};
+  return <Outlet />
+}
 
 const AuthRoutes = () => {
   if (tokenManager.isAuthenticated()) {
-    return <Navigate to="/chat" replace />;
+    return <Navigate to="/chat" replace />
   }
 
-  return <Outlet />;
-};
+  return <Outlet />
+}
 
 function App() {
   return (
     <AppProvider>
+      <Toaster position="top-right" toastOptions={{ duration: 4000 }} />
       <BrowserRouter>
         <Routes>
           <Route element={<AuthRoutes />}>
@@ -82,7 +84,7 @@ function App() {
         </Routes>
       </BrowserRouter>
     </AppProvider>
-  );
+  )
 }
 
-export default App;
+export default App

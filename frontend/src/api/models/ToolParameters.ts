@@ -3,8 +3,7 @@
 /* tslint:disable */
 /* eslint-disable */
 export type ToolParameters = {
-    type?: string;
-    properties: Record<string, any>;
-    required?: (Array<string> | null);
-};
-
+  type?: string
+  properties: Record<string, any>
+  required?: Array<string> | null
+}

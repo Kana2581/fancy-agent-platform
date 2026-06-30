@@ -1,20 +1,20 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { ChevronDown } from 'lucide-react';
+import React, { useEffect, useRef, useState } from 'react'
+import { ChevronDown } from 'lucide-react'
 
 export interface SelectOption {
-  value: string | number;
-  label: string;
-  disabled?: boolean;
+  value: string | number
+  label: string
+  disabled?: boolean
 }
 
 interface ThemedSelectProps {
-  value: string | number;
-  onChange: (value: string) => void;
-  options: SelectOption[];
-  className?: string;
-  disabled?: boolean;
-  required?: boolean;
-  placeholder?: string;
+  value: string | number
+  onChange: (value: string) => void
+  options: SelectOption[]
+  className?: string
+  disabled?: boolean
+  required?: boolean
+  placeholder?: string
 }
 
 const ThemedSelect: React.FC<ThemedSelectProps> = ({
@@ -25,21 +25,21 @@ const ThemedSelect: React.FC<ThemedSelectProps> = ({
   disabled = false,
   placeholder,
 }) => {
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
 
-  const selected = options.find((o) => String(o.value) === String(value));
-  const displayLabel = selected ? selected.label : placeholder ?? '';
+  const selected = options.find((o) => String(o.value) === String(value))
+  const displayLabel = selected ? selected.label : (placeholder ?? '')
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       if (ref.current && !ref.current.contains(e.target as Node)) {
-        setOpen(false);
+        setOpen(false)
       }
-    };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
-  }, []);
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [])
 
   return (
     <div ref={ref} className="relative">
@@ -65,8 +65,8 @@ const ThemedSelect: React.FC<ThemedSelectProps> = ({
               disabled={opt.disabled}
               onClick={() => {
                 if (!opt.disabled) {
-                  onChange(String(opt.value));
-                  setOpen(false);
+                  onChange(String(opt.value))
+                  setOpen(false)
                 }
               }}
               className={`w-full text-left px-4 py-2.5 text-sm text-gray-800 dark:text-white transition-colors
@@ -79,7 +79,7 @@ const ThemedSelect: React.FC<ThemedSelectProps> = ({
         </div>
       )}
     </div>
-  );
-};
+  )
+}
 
-export default ThemedSelect;
+export default ThemedSelect

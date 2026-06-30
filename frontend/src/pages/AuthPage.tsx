@@ -1,98 +1,102 @@
-import { useMemo, useState } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { ApiError, DefaultService } from '../api';
-import { tokenManager } from '../utils/TokenManager';
-import { setupApiClient } from '../utils/ApiClient';
-import { useAppContext } from '../context/AppContext';
+import { useMemo, useState } from 'react'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { ApiError, DefaultService } from '../api'
+import { tokenManager } from '../utils/TokenManager'
+import { setupApiClient } from '../utils/ApiClient'
+import { useAppContext } from '../context/AppContext'
 
 const ERROR_MESSAGES: Record<string, string> = {
   'Invalid email or password': '用户名或密码错误',
   'Email already exists': '邮箱已被注册',
   'Username already exists': '用户名已被占用',
   'User not found': '用户不存在',
-};
+}
 
 const extractErrorMessage = (error: unknown): string => {
   if (error instanceof ApiError) {
     if (error.status === 429) {
-      return '操作过于频繁，请稍候再试';
+      return '操作过于频繁，请稍候再试'
     }
-    const detail = error.body?.detail;
-    if (typeof detail === 'string') return ERROR_MESSAGES[detail] ?? detail;
+    const detail = error.body?.detail
+    if (typeof detail === 'string') return ERROR_MESSAGES[detail] ?? detail
   }
-  if (error instanceof Error) return error.message;
-  return '请求失败，请稍后重试';
-};
-type AuthMode = 'login' | 'register';
+  if (error instanceof Error) return error.message
+  return '请求失败，请稍后重试'
+}
+type AuthMode = 'login' | 'register'
 
 const AuthPage = () => {
-  const location = useLocation();
-  const navigate = useNavigate();
-  const { refreshAll } = useAppContext();
+  const location = useLocation()
+  const navigate = useNavigate()
+  const { refreshAll } = useAppContext()
   const mode: AuthMode = useMemo(
     () => (location.pathname.includes('register') ? 'register' : 'login'),
-    [location.pathname],
-  );
+    [location.pathname]
+  )
 
-  const [username, setUsername] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [username, setUsername] = useState('')
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
+  const [error, setError] = useState('')
+  const [success, setSuccess] = useState('')
+  const [loading, setLoading] = useState(false)
 
   const submitLogin = async () => {
-    const loginResult = await DefaultService.loginApiV1AuthLoginPost({ username, password });
-    const accessToken = loginResult.access_token;
+    const loginResult = await DefaultService.loginApiV1AuthLoginPost({ username, password })
+    const accessToken = loginResult.access_token
     if (!accessToken) {
-      throw new Error('登录响应未返回 access_token');
+      throw new Error('登录响应未返回 access_token')
     }
-    tokenManager.setToken(accessToken);
-    setupApiClient();
-    await refreshAll();
-    navigate('/chat', { replace: true });
-  };
+    tokenManager.setToken(accessToken)
+    setupApiClient()
+    await refreshAll()
+    void navigate('/chat', { replace: true })
+  }
 
   const submitRegister = async () => {
     if (password !== confirmPassword) {
-      throw new Error('两次输入的密码不一致');
+      throw new Error('两次输入的密码不一致')
     }
 
     await DefaultService.registerUserApiV1AuthRegisterPost({
       username,
       email,
       password,
-    });
+    })
 
-    setSuccess('注册成功，正在为你自动登录...');
-    await submitLogin();
-  };
+    setSuccess('注册成功，正在为你自动登录...')
+    await submitLogin()
+  }
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    setError('');
-    setSuccess('');
+    event.preventDefault()
+    setError('')
+    setSuccess('')
 
     try {
-      setLoading(true);
+      setLoading(true)
       if (mode === 'login') {
-        await submitLogin();
+        await submitLogin()
       } else {
-        await submitRegister();
+        await submitRegister()
       }
     } catch (submitError) {
-      setError(extractErrorMessage(submitError));
+      setError(extractErrorMessage(submitError))
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  };
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4 py-8">
       <div className="w-full max-w-md bg-white rounded-2xl border border-gray-200 shadow-sm p-8">
-        <p className="mb-1 text-xs font-medium text-gray-400 tracking-widest uppercase">Fancy Agent</p>
-        <h1 className="mb-6 text-2xl font-semibold text-gray-900">{mode === 'login' ? '欢迎回来' : '创建账号'}</h1>
+        <p className="mb-1 text-xs font-medium text-gray-400 tracking-widest uppercase">
+          Fancy Agent
+        </p>
+        <h1 className="mb-6 text-2xl font-semibold text-gray-900">
+          {mode === 'login' ? '欢迎回来' : '创建账号'}
+        </h1>
 
         <form className="space-y-3" onSubmit={handleSubmit}>
           {mode === 'register' && (
@@ -139,7 +143,11 @@ const AuthPage = () => {
               {error}
             </p>
           )}
-          {success && <p className="rounded-xl border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-700">{success}</p>}
+          {success && (
+            <p className="rounded-xl border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-700">
+              {success}
+            </p>
+          )}
 
           <button
             className="w-full mt-2 rounded-xl bg-gray-900 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-gray-700 disabled:cursor-not-allowed disabled:opacity-60"
@@ -161,7 +169,7 @@ const AuthPage = () => {
         </p>
       </div>
     </div>
-  );
-};
+  )
+}
 
-export default AuthPage;
+export default AuthPage

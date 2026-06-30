@@ -1,15 +1,16 @@
-import React, { useState, useEffect } from 'react';
-import { Plus, Edit2, Trash2, Copy, ArrowLeft, X, FileText } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
-import type { PromptTemplateOut, PromptTemplateCreate, PromptTemplateUpdate } from '../api';
-import { PromptTemplatesService } from '../api';
-import { writeToClipboard } from '../utils/clipboard';
+import React, { useState, useEffect } from 'react'
+import toast from 'react-hot-toast'
+import { Plus, Edit2, Trash2, Copy, ArrowLeft, X, FileText } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+import type { PromptTemplateOut, PromptTemplateCreate, PromptTemplateUpdate } from '../api'
+import { PromptTemplatesService } from '../api'
+import { writeToClipboard } from '../utils/clipboard'
 
 interface TemplateFormData {
-  name: string;
-  content: string;
-  description: string;
-  category: string;
+  name: string
+  content: string
+  description: string
+  category: string
 }
 
 const DEFAULT_FORM: TemplateFormData = {
@@ -17,97 +18,101 @@ const DEFAULT_FORM: TemplateFormData = {
   content: '',
   description: '',
   category: '',
-};
+}
 
 const PromptTemplatesPage: React.FC = () => {
-  const navigate = useNavigate();
-  const [templates, setTemplates] = useState<PromptTemplateOut[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [showModal, setShowModal] = useState(false);
-  const [editingTemplate, setEditingTemplate] = useState<PromptTemplateOut | null>(null);
-  const [form, setForm] = useState<TemplateFormData>(DEFAULT_FORM);
-  const [saving, setSaving] = useState(false);
-  const [copiedId, setCopiedId] = useState<number | null>(null);
+  const navigate = useNavigate()
+  const [templates, setTemplates] = useState<PromptTemplateOut[]>([])
+  const [loading, setLoading] = useState(true)
+  const [showModal, setShowModal] = useState(false)
+  const [editingTemplate, setEditingTemplate] = useState<PromptTemplateOut | null>(null)
+  const [form, setForm] = useState<TemplateFormData>(DEFAULT_FORM)
+  const [saving, setSaving] = useState(false)
+  const [copiedId, setCopiedId] = useState<number | null>(null)
 
   const loadTemplates = async () => {
     try {
-      const data = await PromptTemplatesService.listPromptTemplates();
-      setTemplates(data);
+      const data = await PromptTemplatesService.listPromptTemplates()
+      setTemplates(data)
     } catch (e) {
-      console.error('加载提示词模板失败:', e);
+      console.error('加载提示词模板失败:', e)
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  };
+  }
 
-  useEffect(() => { loadTemplates(); }, []);
+  useEffect(() => {
+    void loadTemplates()
+  }, [])
 
   const openCreate = () => {
-    setEditingTemplate(null);
-    setForm(DEFAULT_FORM);
-    setShowModal(true);
-  };
+    setEditingTemplate(null)
+    setForm(DEFAULT_FORM)
+    setShowModal(true)
+  }
 
   const openEdit = (template: PromptTemplateOut) => {
-    setEditingTemplate(template);
+    setEditingTemplate(template)
     setForm({
       name: template.name,
       content: template.content,
       description: template.description ?? '',
       category: template.category ?? '',
-    });
-    setShowModal(true);
-  };
+    })
+    setShowModal(true)
+  }
 
   const handleSave = async () => {
-    if (!form.name.trim() || !form.content.trim()) return;
-    setSaving(true);
+    if (!form.name.trim() || !form.content.trim()) return
+    setSaving(true)
     try {
       const payload = {
         name: form.name.trim(),
         content: form.content.trim(),
         description: form.description.trim() || null,
         category: form.category.trim() || null,
-      };
+      }
       if (editingTemplate) {
         const updated = await PromptTemplatesService.updatePromptTemplate(
           editingTemplate.id,
-          payload as PromptTemplateUpdate,
-        );
-        setTemplates(prev => prev.map(t => t.id === updated.id ? updated : t));
+          payload as PromptTemplateUpdate
+        )
+        setTemplates((prev) => prev.map((t) => (t.id === updated.id ? updated : t)))
       } else {
-        const created = await PromptTemplatesService.createPromptTemplate(payload as PromptTemplateCreate);
-        setTemplates(prev => [created, ...prev]);
+        const created = await PromptTemplatesService.createPromptTemplate(
+          payload as PromptTemplateCreate
+        )
+        setTemplates((prev) => [created, ...prev])
       }
-      setShowModal(false);
+      setShowModal(false)
     } catch (e) {
-      console.error(e);
-      alert('保存失败');
+      console.error(e)
+      toast.error('保存失败')
     } finally {
-      setSaving(false);
+      setSaving(false)
     }
-  };
+  }
 
   const handleDelete = async (template: PromptTemplateOut) => {
-    if (!confirm(`确定要删除模板「${template.name}」吗？`)) return;
+    if (!confirm(`确定要删除模板「${template.name}」吗？`)) return
     try {
-      await PromptTemplatesService.deletePromptTemplate(template.id);
-      setTemplates(prev => prev.filter(t => t.id !== template.id));
+      await PromptTemplatesService.deletePromptTemplate(template.id)
+      setTemplates((prev) => prev.filter((t) => t.id !== template.id))
     } catch (e) {
-      console.error(e);
-      alert('删除失败');
+      console.error(e)
+      toast.error('删除失败')
     }
-  };
+  }
 
   const handleCopy = async (template: PromptTemplateOut) => {
     try {
-      await writeToClipboard(template.content);
-      setCopiedId(template.id);
-      setTimeout(() => setCopiedId(null), 1500);
+      await writeToClipboard(template.content)
+      setCopiedId(template.id)
+      setTimeout(() => setCopiedId(null), 1500)
     } catch {
-      alert('复制失败，请手动复制');
+      toast.error('复制失败，请手动复制')
     }
-  };
+  }
 
   return (
     <div className="p-8 overflow-y-auto">
@@ -145,7 +150,7 @@ const PromptTemplatesPage: React.FC = () => {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-            {templates.map(template => (
+            {templates.map((template) => (
               <div
                 key={template.id}
                 className="bg-white dark:bg-zinc-900 rounded-xl p-6 border border-gray-200 dark:border-zinc-700 group  hover:scale-[1.02] transition-all flex flex-col"
@@ -153,9 +158,13 @@ const PromptTemplatesPage: React.FC = () => {
                 {/* Title row */}
                 <div className="flex items-start justify-between mb-2">
                   <div className="flex-1 min-w-0">
-                    <h3 className="font-semibold text-lg text-gray-800 truncate">{template.name}</h3>
+                    <h3 className="font-semibold text-lg text-gray-800 truncate">
+                      {template.name}
+                    </h3>
                     {template.description && (
-                      <p className="text-sm text-gray-600 mt-0.5 line-clamp-2">{template.description}</p>
+                      <p className="text-sm text-gray-600 mt-0.5 line-clamp-2">
+                        {template.description}
+                      </p>
                     )}
                   </div>
                   {template.category && (
@@ -176,7 +185,8 @@ const PromptTemplatesPage: React.FC = () => {
                     onClick={() => openEdit(template)}
                     className="flex-1 py-2 text-sm bg-gray-100 dark:bg-zinc-800 hover:bg-gray-200 dark:hover:bg-zinc-600 text-gray-700 rounded-xl transition-all flex items-center justify-center gap-1.5"
                   >
-                    <Edit2 size={14} />编辑
+                    <Edit2 size={14} />
+                    编辑
                   </button>
                   <button
                     onClick={() => handleCopy(template)}
@@ -234,7 +244,7 @@ const PromptTemplatesPage: React.FC = () => {
                 <input
                   type="text"
                   value={form.name}
-                  onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
+                  onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
                   placeholder="为模板起个名字"
                   className="w-full px-4 py-2.5 bg-white dark:bg-zinc-800 border border-gray-300 dark:border-zinc-700 rounded-2xl focus:outline-none focus:ring-1 focus:ring-gray-300 dark:focus:ring-zinc-600 focus:border-gray-500 dark:focus:border-zinc-400 text-gray-800 placeholder-gray-500 transition-all"
                 />
@@ -245,7 +255,7 @@ const PromptTemplatesPage: React.FC = () => {
                 <input
                   type="text"
                   value={form.category}
-                  onChange={e => setForm(f => ({ ...f, category: e.target.value }))}
+                  onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))}
                   placeholder="可选，如：翻译、写作、代码..."
                   className="w-full px-4 py-2.5 bg-white dark:bg-zinc-800 border border-gray-300 dark:border-zinc-700 rounded-2xl focus:outline-none focus:ring-1 focus:ring-gray-300 dark:focus:ring-zinc-600 focus:border-gray-500 dark:focus:border-zinc-400 text-gray-800 placeholder-gray-500 transition-all"
                 />
@@ -256,7 +266,7 @@ const PromptTemplatesPage: React.FC = () => {
                 <input
                   type="text"
                   value={form.description}
-                  onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
+                  onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
                   placeholder="可选，简短描述模板用途"
                   className="w-full px-4 py-2.5 bg-white dark:bg-zinc-800 border border-gray-300 dark:border-zinc-700 rounded-2xl focus:outline-none focus:ring-1 focus:ring-gray-300 dark:focus:ring-zinc-600 focus:border-gray-500 dark:focus:border-zinc-400 text-gray-800 placeholder-gray-500 transition-all"
                 />
@@ -268,7 +278,7 @@ const PromptTemplatesPage: React.FC = () => {
                 </label>
                 <textarea
                   value={form.content}
-                  onChange={e => setForm(f => ({ ...f, content: e.target.value }))}
+                  onChange={(e) => setForm((f) => ({ ...f, content: e.target.value }))}
                   placeholder="输入提示词内容..."
                   rows={6}
                   className="w-full px-4 py-2.5 bg-white dark:bg-zinc-800 border border-gray-300 dark:border-zinc-700 rounded-2xl focus:outline-none focus:ring-1 focus:ring-gray-300 dark:focus:ring-zinc-600 focus:border-gray-500 dark:focus:border-zinc-400 text-gray-800 placeholder-gray-500 resize-none transition-all"
@@ -295,7 +305,7 @@ const PromptTemplatesPage: React.FC = () => {
         </div>
       )}
     </div>
-  );
-};
+  )
+}
 
-export default PromptTemplatesPage;
+export default PromptTemplatesPage

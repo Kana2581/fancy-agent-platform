@@ -3,10 +3,9 @@
 /* tslint:disable */
 /* eslint-disable */
 export type MCPCreate = {
-    mcp_name: string;
-    transport: string;
-    config_json?: (Record<string, any> | null);
-    is_builtin?: (boolean | null);
-    is_enabled?: (boolean | null);
-};
-
+  mcp_name: string
+  transport: string
+  config_json?: Record<string, any> | null
+  is_builtin?: boolean | null
+  is_enabled?: boolean | null
+}

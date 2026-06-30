@@ -1,77 +1,80 @@
-import React, { useState, useEffect } from 'react';
-import { Mail, Save, Trash2, ToggleLeft, ToggleRight } from 'lucide-react';
-import ThemedSelect from './ThemedSelect';
-import { useAppContext } from '../context/AppContext';
-import { EmailAgentService } from '../api/services/EmailAgentService';
-import type { UserEmailAgentOut } from '../api/models/UserEmailAgentOut';
+import React, { useState, useEffect } from 'react'
+import toast from 'react-hot-toast'
+import { Mail, Save, Trash2, ToggleLeft, ToggleRight } from 'lucide-react'
+import ThemedSelect from './ThemedSelect'
+import { useAppContext } from '../context/AppContext'
+import { EmailAgentService } from '../api/services/EmailAgentService'
+import type { UserEmailAgentOut } from '../api/models/UserEmailAgentOut'
 
 const EmailAgentConfig: React.FC = () => {
-  const { agents } = useAppContext();
-  const [config, setConfig] = useState<UserEmailAgentOut | null>(null);
-  const [selectedAgentId, setSelectedAgentId] = useState<number>(0);
-  const [isEnabled, setIsEnabled] = useState(true);
-  const [loading, setLoading] = useState(false);
-  const [fetching, setFetching] = useState(true);
+  const { agents } = useAppContext()
+  const [config, setConfig] = useState<UserEmailAgentOut | null>(null)
+  const [selectedAgentId, setSelectedAgentId] = useState<number>(0)
+  const [isEnabled, setIsEnabled] = useState(true)
+  const [loading, setLoading] = useState(false)
+  const [fetching, setFetching] = useState(true)
 
   useEffect(() => {
-    loadConfig();
-  }, []);
+    void loadConfig()
+  }, [])
 
   const loadConfig = async () => {
-    setFetching(true);
+    setFetching(true)
     try {
-      const data = await EmailAgentService.getEmailAgentApiV1EmailAgentGet();
-      setConfig(data);
-      setSelectedAgentId(data.agent_id);
-      setIsEnabled(data.is_enabled);
+      const data = await EmailAgentService.getEmailAgentApiV1EmailAgentGet()
+      setConfig(data)
+      setSelectedAgentId(data.agent_id)
+      setIsEnabled(data.is_enabled)
     } catch {
-      setConfig(null);
+      setConfig(null)
     } finally {
-      setFetching(false);
+      setFetching(false)
     }
-  };
+  }
 
   const handleSave = async () => {
     if (!selectedAgentId) {
-      alert('请选择一个 Agent');
-      return;
+      toast.error('请选择一个 Agent')
+      return
     }
-    setLoading(true);
+    setLoading(true)
     try {
       if (config) {
         const updated = await EmailAgentService.updateEmailAgentApiV1EmailAgentPut({
           agent_id: selectedAgentId,
           is_enabled: isEnabled,
-        });
-        setConfig(updated);
+        })
+        setConfig(updated)
       } else {
-        const created = await EmailAgentService.createEmailAgentApiV1EmailAgentPost({ agent_id: selectedAgentId });
-        setConfig(created);
-        setIsEnabled(created.is_enabled);
+        const created = await EmailAgentService.createEmailAgentApiV1EmailAgentPost({
+          agent_id: selectedAgentId,
+        })
+        setConfig(created)
+        setIsEnabled(created.is_enabled)
       }
     } catch (e) {
-      console.error(e);
-      alert('保存失败');
+      console.error(e)
+      toast.error('保存失败')
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  };
+  }
 
   const handleDelete = async () => {
-    if (!confirm('确定要删除邮件 Agent 配置吗？')) return;
-    setLoading(true);
+    if (!confirm('确定要删除邮件 Agent 配置吗？')) return
+    setLoading(true)
     try {
-      await EmailAgentService.deleteEmailAgentApiV1EmailAgentDelete();
-      setConfig(null);
-      setSelectedAgentId(0);
-      setIsEnabled(true);
+      await EmailAgentService.deleteEmailAgentApiV1EmailAgentDelete()
+      setConfig(null)
+      setSelectedAgentId(0)
+      setIsEnabled(true)
     } catch (e) {
-      console.error(e);
-      alert('删除失败');
+      console.error(e)
+      toast.error('删除失败')
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  };
+  }
 
   if (fetching) {
     return (
@@ -82,7 +85,7 @@ const EmailAgentConfig: React.FC = () => {
         </div>
         <p className="text-gray-500 text-sm">加载中...</p>
       </div>
-    );
+    )
   }
 
   return (
@@ -103,21 +106,22 @@ const EmailAgentConfig: React.FC = () => {
             value={selectedAgentId}
             onChange={(v) => setSelectedAgentId(Number(v))}
             placeholder="请选择 Agent"
-            options={agents.map((agent) => ({ value: agent.id, label: `${agent.avatar} ${agent.description}` }))}
+            options={agents.map((agent) => ({
+              value: agent.id,
+              label: `${agent.avatar} ${agent.description}`,
+            }))}
             className="w-full px-3 py-2 bg-white dark:bg-zinc-800 border border-gray-300 dark:border-zinc-700 rounded-xl text-gray-800 focus:outline-none focus:ring-1 focus:ring-gray-300 dark:focus:ring-zinc-600"
           />
         </div>
 
         <div className="flex items-center justify-between">
           <span className="text-sm font-medium text-gray-700">启用邮件对话</span>
-          <button
-            onClick={() => setIsEnabled(!isEnabled)}
-            className="focus:outline-none"
-          >
-            {isEnabled
-              ? <ToggleRight size={28} className="text-blue-500" />
-              : <ToggleLeft size={28} className="text-gray-400" />
-            }
+          <button onClick={() => setIsEnabled(!isEnabled)} className="focus:outline-none">
+            {isEnabled ? (
+              <ToggleRight size={28} className="text-blue-500" />
+            ) : (
+              <ToggleLeft size={28} className="text-gray-400" />
+            )}
           </button>
         </div>
 
@@ -149,7 +153,7 @@ const EmailAgentConfig: React.FC = () => {
         </div>
       </div>
     </div>
-  );
-};
+  )
+}
 
-export default EmailAgentConfig;
+export default EmailAgentConfig

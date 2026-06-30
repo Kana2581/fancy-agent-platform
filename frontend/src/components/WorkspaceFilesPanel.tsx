@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState, useCallback } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react'
 import {
   FolderClosed,
   FolderOpen,
@@ -9,124 +9,124 @@ import {
   FileText,
   AlertCircle,
   RefreshCw,
-} from 'lucide-react';
-import { WorkspacesService } from '../api';
-import type { WorkspaceFileOut } from '../api';
+} from 'lucide-react'
+import { WorkspacesService } from '../api'
+import type { WorkspaceFileOut } from '../api'
 
 interface Props {
-  sessionId: string;
-  isLoading: boolean;
+  sessionId: string
+  isLoading: boolean
 }
 
 function formatSize(bytes?: number): string {
-  if (!bytes || bytes < 0) return '';
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  if (bytes < 1024 * 1024 * 1024) return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
-  return `${(bytes / 1024 / 1024 / 1024).toFixed(2)} GB`;
+  if (!bytes || bytes < 0) return ''
+  if (bytes < 1024) return `${bytes} B`
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
+  if (bytes < 1024 * 1024 * 1024) return `${(bytes / 1024 / 1024).toFixed(1)} MB`
+  return `${(bytes / 1024 / 1024 / 1024).toFixed(2)} GB`
 }
 
 function triggerBlobDownload(blob: Blob, filename: string) {
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  setTimeout(() => URL.revokeObjectURL(url), 0);
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = filename
+  document.body.appendChild(a)
+  a.click()
+  document.body.removeChild(a)
+  setTimeout(() => URL.revokeObjectURL(url), 0)
 }
 
 const WorkspaceFilesPanel: React.FC<Props> = ({ sessionId, isLoading }) => {
-  const [collapsed, setCollapsed] = useState(true);
-  const [files, setFiles] = useState<WorkspaceFileOut[]>([]);
-  const [hasNew, setHasNew] = useState(false);
-  const [refreshing, setRefreshing] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [downloadingId, setDownloadingId] = useState<number | null>(null);
-  const [downloadingAll, setDownloadingAll] = useState(false);
+  const [collapsed, setCollapsed] = useState(true)
+  const [files, setFiles] = useState<WorkspaceFileOut[]>([])
+  const [hasNew, setHasNew] = useState(false)
+  const [refreshing, setRefreshing] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [downloadingId, setDownloadingId] = useState<number | null>(null)
+  const [downloadingAll, setDownloadingAll] = useState(false)
 
-  const seenIdsRef = useRef<Set<number>>(new Set());
-  const prevLoadingRef = useRef(isLoading);
+  const seenIdsRef = useRef<Set<number>>(new Set())
+  const prevLoadingRef = useRef(isLoading)
 
   const refresh = useCallback(
     async (markAsSeen: boolean) => {
-      if (!sessionId) return;
-      setRefreshing(true);
-      setError(null);
+      if (!sessionId) return
+      setRefreshing(true)
+      setError(null)
       try {
-        const next = await WorkspacesService.listFiles(sessionId);
-        setFiles(next);
+        const next = await WorkspacesService.listFiles(sessionId)
+        setFiles(next)
         if (markAsSeen) {
-          seenIdsRef.current = new Set(next.map((f) => f.file_id));
-          setHasNew(false);
+          seenIdsRef.current = new Set(next.map((f) => f.file_id))
+          setHasNew(false)
         } else {
-          const fresh = next.some((f) => !seenIdsRef.current.has(f.file_id));
-          if (fresh) setHasNew(true);
+          const fresh = next.some((f) => !seenIdsRef.current.has(f.file_id))
+          if (fresh) setHasNew(true)
           // 即便没有新增，也补齐 seen 集合
-          next.forEach((f) => seenIdsRef.current.add(f.file_id));
+          next.forEach((f) => seenIdsRef.current.add(f.file_id))
         }
       } catch (e) {
-        setError(e instanceof Error ? e.message : '加载失败');
+        setError(e instanceof Error ? e.message : '加载失败')
       } finally {
-        setRefreshing(false);
+        setRefreshing(false)
       }
     },
-    [sessionId],
-  );
+    [sessionId]
+  )
 
   // session 切换：重置 + 拉一次（视为初始已读）
   useEffect(() => {
-    seenIdsRef.current = new Set();
-    setHasNew(false);
-    setFiles([]);
-    setError(null);
-    if (sessionId) refresh(true);
-  }, [sessionId, refresh]);
+    seenIdsRef.current = new Set()
+    setHasNew(false)
+    setFiles([])
+    setError(null)
+    if (sessionId) void refresh(true)
+  }, [sessionId, refresh])
 
   // agent 流结束（isLoading: true → false）后重新拉一次，标记新增
   useEffect(() => {
-    const wasLoading = prevLoadingRef.current;
-    prevLoadingRef.current = isLoading;
+    const wasLoading = prevLoadingRef.current
+    prevLoadingRef.current = isLoading
     if (wasLoading && !isLoading && sessionId) {
-      refresh(false);
+      void refresh(false)
     }
-  }, [isLoading, sessionId, refresh]);
+  }, [isLoading, sessionId, refresh])
 
   // 展开时清掉新增提醒
   useEffect(() => {
     if (!collapsed && hasNew) {
-      setHasNew(false);
-      seenIdsRef.current = new Set(files.map((f) => f.file_id));
+      setHasNew(false)
+      seenIdsRef.current = new Set(files.map((f) => f.file_id))
     }
-  }, [collapsed, hasNew, files]);
+  }, [collapsed, hasNew, files])
 
   const handleDownload = async (f: WorkspaceFileOut) => {
-    if (downloadingId === f.file_id) return;
-    setDownloadingId(f.file_id);
+    if (downloadingId === f.file_id) return
+    setDownloadingId(f.file_id)
     try {
-      const { blob, filename } = await WorkspacesService.downloadFile(f.file_id, f.name);
-      triggerBlobDownload(blob, f.name || filename);
+      const { blob, filename } = await WorkspacesService.downloadFile(f.file_id, f.name)
+      triggerBlobDownload(blob, f.name || filename)
     } catch (e) {
-      setError(e instanceof Error ? e.message : '下载失败');
+      setError(e instanceof Error ? e.message : '下载失败')
     } finally {
-      setDownloadingId(null);
+      setDownloadingId(null)
     }
-  };
+  }
 
   const handleDownloadAll = async () => {
-    if (downloadingAll || files.length === 0) return;
-    setDownloadingAll(true);
-    setError(null);
+    if (downloadingAll || files.length === 0) return
+    setDownloadingAll(true)
+    setError(null)
     try {
-      const { blob, filename } = await WorkspacesService.downloadAll(sessionId);
-      triggerBlobDownload(blob, filename);
+      const { blob, filename } = await WorkspacesService.downloadAll(sessionId)
+      triggerBlobDownload(blob, filename)
     } catch (e) {
-      setError(e instanceof Error ? e.message : '打包下载失败');
+      setError(e instanceof Error ? e.message : '打包下载失败')
     } finally {
-      setDownloadingAll(false);
+      setDownloadingAll(false)
     }
-  };
+  }
 
   if (collapsed) {
     return (
@@ -146,7 +146,9 @@ const WorkspaceFilesPanel: React.FC<Props> = ({ sessionId, isLoading }) => {
           {files.length > 0 && (
             <span
               className={`absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-bold flex items-center justify-center ${
-                hasNew ? 'bg-gray-900 dark:bg-white text-white dark:text-gray-900' : 'bg-white dark:bg-zinc-800 text-gray-700 dark:text-zinc-300'
+                hasNew
+                  ? 'bg-gray-900 dark:bg-white text-white dark:text-gray-900'
+                  : 'bg-white dark:bg-zinc-800 text-gray-700 dark:text-zinc-300'
               }`}
             >
               {files.length}
@@ -154,7 +156,7 @@ const WorkspaceFilesPanel: React.FC<Props> = ({ sessionId, isLoading }) => {
           )}
         </button>
       </div>
-    );
+    )
   }
 
   return (
@@ -189,7 +191,11 @@ const WorkspaceFilesPanel: React.FC<Props> = ({ sessionId, isLoading }) => {
               title="刷新"
               aria-label="刷新"
             >
-              {refreshing ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />}
+              {refreshing ? (
+                <Loader2 size={14} className="animate-spin" />
+              ) : (
+                <RefreshCw size={14} />
+              )}
             </button>
             <button
               type="button"
@@ -244,7 +250,7 @@ const WorkspaceFilesPanel: React.FC<Props> = ({ sessionId, isLoading }) => {
         </div>
       </div>
     </div>
-  );
-};
+  )
+}
 
-export default WorkspaceFilesPanel;
+export default WorkspaceFilesPanel

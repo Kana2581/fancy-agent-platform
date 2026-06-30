@@ -1,4 +1,4 @@
 export type SkillFileIn = {
-    path: string;
-    content: string;
-};
+  path: string
+  content: string
+}

@@ -1,90 +1,93 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { ArrowLeft, Plus, Trash2, X, Webhook, RefreshCcw, Copy, Check, Power } from 'lucide-react';
-import { writeToClipboard } from '../utils/clipboard';
-import { useNavigate } from 'react-router-dom';
-import type { AgentWebhookOut, AgentWebhookOutWithSecret } from '../api';
-import { AgentWebhooksService, OpenAPI } from '../api';
-import { useAppContext } from '../context/AppContext';
-import ThemedSelect from '../components/ThemedSelect';
+import React, { useEffect, useMemo, useState } from 'react'
+import toast from 'react-hot-toast'
+import { ArrowLeft, Plus, Trash2, X, Webhook, RefreshCcw, Copy, Check, Power } from 'lucide-react'
+import { writeToClipboard } from '../utils/clipboard'
+import { useNavigate } from 'react-router-dom'
+import type { AgentWebhookOut, AgentWebhookOutWithSecret } from '../api'
+import { AgentWebhooksService, OpenAPI } from '../api'
+import { useAppContext } from '../context/AppContext'
+import ThemedSelect from '../components/ThemedSelect'
 
 const getApiOrigin = () => {
-  const raw = OpenAPI.BASE || (import.meta.env.VITE_API_BASE as string) || '';
-  if (raw && /^https?:\/\//i.test(raw)) return raw.replace(/\/$/, '');
-  return window.location.origin;
-};
+  const raw = OpenAPI.BASE || (import.meta.env.VITE_API_BASE as string) || ''
+  if (raw && /^https?:\/\//i.test(raw)) return raw.replace(/\/$/, '')
+  return window.location.origin
+}
 
 interface CreatedSecret {
-  webhook: AgentWebhookOutWithSecret;
-  fresh: boolean; // 是否是刚刚创建/重置的
+  webhook: AgentWebhookOutWithSecret
+  fresh: boolean // 是否是刚刚创建/重置的
 }
 
 const AgentWebhooksPage: React.FC = () => {
-  const navigate = useNavigate();
-  const { agents } = useAppContext();
-  const agentMap = useMemo(() => new Map(agents.map(a => [a.id, a])), [agents]);
+  const navigate = useNavigate()
+  const { agents } = useAppContext()
+  const agentMap = useMemo(() => new Map(agents.map((a) => [a.id, a])), [agents])
 
-  const [hooks, setHooks] = useState<AgentWebhookOut[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [hooks, setHooks] = useState<AgentWebhookOut[]>([])
+  const [loading, setLoading] = useState(true)
 
-  const [showCreate, setShowCreate] = useState(false);
-  const [name, setName] = useState('');
-  const [agentId, setAgentId] = useState<number | ''>('');
-  const [channel, setChannel] = useState<'generic' | 'telegram' | 'dingtalk' | 'discord'>('generic');
-  const [telegramBotToken, setTelegramBotToken] = useState('');
-  const [dingtalkAppSecret, setDingtalkAppSecret] = useState('');
-  const [discordPublicKey, setDiscordPublicKey] = useState('');
-  const [saving, setSaving] = useState(false);
+  const [showCreate, setShowCreate] = useState(false)
+  const [name, setName] = useState('')
+  const [agentId, setAgentId] = useState<number | ''>('')
+  const [channel, setChannel] = useState<'generic' | 'telegram' | 'dingtalk' | 'discord'>('generic')
+  const [telegramBotToken, setTelegramBotToken] = useState('')
+  const [dingtalkAppSecret, setDingtalkAppSecret] = useState('')
+  const [discordPublicKey, setDiscordPublicKey] = useState('')
+  const [saving, setSaving] = useState(false)
 
-  const [secretInfo, setSecretInfo] = useState<CreatedSecret | null>(null);
-  const [copiedKey, setCopiedKey] = useState<string | null>(null);
-  const [codeTab, setCodeTab] = useState<'bash' | 'powershell'>('bash');
+  const [secretInfo, setSecretInfo] = useState<CreatedSecret | null>(null)
+  const [copiedKey, setCopiedKey] = useState<string | null>(null)
+  const [codeTab, setCodeTab] = useState<'bash' | 'powershell'>('bash')
 
   const load = async () => {
-    setLoading(true);
+    setLoading(true)
     try {
-      const data = await AgentWebhooksService.listWebhooks();
-      setHooks(data);
+      const data = await AgentWebhooksService.listWebhooks()
+      setHooks(data)
     } catch (e) {
-      console.error('加载 Webhook 失败:', e);
+      console.error('加载 Webhook 失败:', e)
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  };
+  }
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    void load()
+  }, [])
 
   const triggerUrl = (hook: Pick<AgentWebhookOut, 'slug' | 'channel'>) => {
-    const path = hook.channel === 'telegram'
-      ? `/api/v1/telegram/webhooks/${hook.slug}`
-      : hook.channel === 'dingtalk'
-        ? `/api/v1/dingtalk/webhooks/${hook.slug}`
-        : hook.channel === 'discord'
-          ? `/api/v1/discord/interactions/${hook.slug}`
-      : `/api/v1/webhooks/${hook.slug}`;
-    return `${getApiOrigin()}${path}`;
-  };
+    const path =
+      hook.channel === 'telegram'
+        ? `/api/v1/telegram/webhooks/${hook.slug}`
+        : hook.channel === 'dingtalk'
+          ? `/api/v1/dingtalk/webhooks/${hook.slug}`
+          : hook.channel === 'discord'
+            ? `/api/v1/discord/interactions/${hook.slug}`
+            : `/api/v1/webhooks/${hook.slug}`
+    return `${getApiOrigin()}${path}`
+  }
 
   const copy = async (key: string, value: string) => {
     try {
-      await writeToClipboard(value);
-      setCopiedKey(key);
-      setTimeout(() => setCopiedKey(prev => (prev === key ? null : prev)), 1500);
+      await writeToClipboard(value)
+      setCopiedKey(key)
+      setTimeout(() => setCopiedKey((prev) => (prev === key ? null : prev)), 1500)
     } catch (e) {
-      console.error(e);
+      console.error(e)
     }
-  };
+  }
 
-  const isCreateFormInvalid = (
-    !name.trim()
-    || agentId === ''
-    || (channel === 'telegram' && !telegramBotToken.trim())
-    || (channel === 'dingtalk' && !dingtalkAppSecret.trim())
-    || (channel === 'discord' && !discordPublicKey.trim())
-  );
+  const isCreateFormInvalid =
+    !name.trim() ||
+    agentId === '' ||
+    (channel === 'telegram' && !telegramBotToken.trim()) ||
+    (channel === 'dingtalk' && !dingtalkAppSecret.trim()) ||
+    (channel === 'discord' && !discordPublicKey.trim())
 
   const handleCreate = async () => {
-    if (isCreateFormInvalid) return;
-    setSaving(true);
+    if (isCreateFormInvalid) return
+    setSaving(true)
     try {
       const created = await AgentWebhooksService.createWebhook({
         name: name.trim(),
@@ -93,74 +96,74 @@ const AgentWebhooksPage: React.FC = () => {
         telegram_bot_token: channel === 'telegram' ? telegramBotToken.trim() : null,
         dingtalk_app_secret: channel === 'dingtalk' ? dingtalkAppSecret.trim() : null,
         discord_public_key: channel === 'discord' ? discordPublicKey.trim() : null,
-      });
-      setHooks(prev => [created, ...prev]);
-      setSecretInfo({ webhook: created, fresh: true });
-      setShowCreate(false);
-      setName('');
-      setAgentId('');
-      setChannel('generic');
-      setTelegramBotToken('');
-      setDingtalkAppSecret('');
-      setDiscordPublicKey('');
+      })
+      setHooks((prev) => [created, ...prev])
+      setSecretInfo({ webhook: created, fresh: true })
+      setShowCreate(false)
+      setName('')
+      setAgentId('')
+      setChannel('generic')
+      setTelegramBotToken('')
+      setDingtalkAppSecret('')
+      setDiscordPublicKey('')
     } catch (e) {
-      console.error(e);
-      alert('创建失败');
+      console.error(e)
+      toast.error('创建失败')
     } finally {
-      setSaving(false);
+      setSaving(false)
     }
-  };
+  }
 
   const handleToggle = async (hook: AgentWebhookOut) => {
     try {
-      const updated = await AgentWebhooksService.updateWebhook(hook.id, { enabled: !hook.enabled });
-      setHooks(prev => prev.map(h => (h.id === updated.id ? updated : h)));
+      const updated = await AgentWebhooksService.updateWebhook(hook.id, { enabled: !hook.enabled })
+      setHooks((prev) => prev.map((h) => (h.id === updated.id ? updated : h)))
     } catch (e) {
-      console.error(e);
-      alert('更新失败');
+      console.error(e)
+      toast.error('更新失败')
     }
-  };
+  }
 
   const handleRegenerate = async (hook: AgentWebhookOut) => {
-    if (!confirm(`重置「${hook.name}」的 secret？旧的密钥将立刻失效。`)) return;
+    if (!confirm(`重置「${hook.name}」的 secret？旧的密钥将立刻失效。`)) return
     try {
-      const updated = await AgentWebhooksService.regenerateSecret(hook.id);
-      setHooks(prev => prev.map(h => (h.id === updated.id ? updated : h)));
-      setSecretInfo({ webhook: updated, fresh: true });
+      const updated = await AgentWebhooksService.regenerateSecret(hook.id)
+      setHooks((prev) => prev.map((h) => (h.id === updated.id ? updated : h)))
+      setSecretInfo({ webhook: updated, fresh: true })
     } catch (e) {
-      console.error(e);
-      alert('重置失败');
+      console.error(e)
+      toast.error('重置失败')
     }
-  };
+  }
 
   const handleDelete = async (hook: AgentWebhookOut) => {
-    if (!confirm(`删除 Webhook「${hook.name}」？此操作不可恢复。`)) return;
+    if (!confirm(`删除 Webhook「${hook.name}」？此操作不可恢复。`)) return
     try {
-      await AgentWebhooksService.deleteWebhook(hook.id);
-      setHooks(prev => prev.filter(h => h.id !== hook.id));
+      await AgentWebhooksService.deleteWebhook(hook.id)
+      setHooks((prev) => prev.filter((h) => h.id !== hook.id))
     } catch (e) {
-      console.error(e);
-      alert('删除失败');
+      console.error(e)
+      toast.error('删除失败')
     }
-  };
+  }
 
   const setupSnippet = (hook: AgentWebhookOutWithSecret, shell: 'bash' | 'powershell') => {
-    const url = triggerUrl(hook);
+    const url = triggerUrl(hook)
     if (hook.channel === 'dingtalk') {
-      return `在钉钉机器人开发配置中启用 HTTP 模式：\n1. 将消息接收地址设置为：${url}\n2. 将 AppSecret 填入本页面创建表单的 DingTalk AppSecret\n3. 在群里 @机器人 后，系统会读取回调中的 text.content，执行 Agent，并通过 sessionWebhook 回群。`;
+      return `在钉钉机器人开发配置中启用 HTTP 模式：\n1. 将消息接收地址设置为：${url}\n2. 将 AppSecret 填入本页面创建表单的 DingTalk AppSecret\n3. 在群里 @机器人 后，系统会读取回调中的 text.content，执行 Agent，并通过 sessionWebhook 回群。`
     }
     if (hook.channel === 'discord') {
-      return `在 Discord Developer Portal 中配置 Slash Command：\n1. 进入 Applications → 你的应用 → General Information，复制 Public Key 填入本页面\n2. 将 Interactions Endpoint URL 设置为：${url}\n3. 用 Discord API 注册命令，示例：\ncurl -X PUT "https://discord.com/api/v10/applications/<application-id>/commands" \\\n  -H "Authorization: Bot <bot-token>" \\\n  -H "Content-Type: application/json" \\\n  -d '[{"name":"ask","description":"Ask the bound Agent","type":1,"options":[{"name":"prompt","description":"Message for the Agent","type":3,"required":true}]}]'\n4. 用户执行 /ask prompt:你的问题 后，本平台会先 deferred response，再把 Agent 回复写回 Discord。`;
+      return `在 Discord Developer Portal 中配置 Slash Command：\n1. 进入 Applications → 你的应用 → General Information，复制 Public Key 填入本页面\n2. 将 Interactions Endpoint URL 设置为：${url}\n3. 用 Discord API 注册命令，示例：\ncurl -X PUT "https://discord.com/api/v10/applications/<application-id>/commands" \\\n  -H "Authorization: Bot <bot-token>" \\\n  -H "Content-Type: application/json" \\\n  -d '[{"name":"ask","description":"Ask the bound Agent","type":1,"options":[{"name":"prompt","description":"Message for the Agent","type":3,"required":true}]}]'\n4. 用户执行 /ask prompt:你的问题 后，本平台会先 deferred response，再把 Agent 回复写回 Discord。`
     }
     if (shell === 'bash') {
       return hook.channel === 'telegram'
         ? `BOT_TOKEN='<your-bot-token>'\nWEBHOOK_URL='${url}'\nSECRET_TOKEN='${hook.secret}'\ncurl -X POST "https://api.telegram.org/bot$BOT_TOKEN/setWebhook" \\\n  -H "Content-Type: application/json" \\\n  -d '{"url":"'"$WEBHOOK_URL"'","secret_token":"'"$SECRET_TOKEN"'","allowed_updates":["message"],"drop_pending_updates":true}'`
-        : `SECRET='${hook.secret}'\nBODY='{"content":"hello"}'\nSIG=$(printf %s "$BODY" | openssl dgst -sha256 -hmac "$SECRET" | awk '{print $2}')\ncurl -X POST "${url}" \\\n  -H "X-Signature: sha256=$SIG" \\\n  -H "Content-Type: application/json" \\\n  --data-raw "$BODY"`;
+        : `SECRET='${hook.secret}'\nBODY='{"content":"hello"}'\nSIG=$(printf %s "$BODY" | openssl dgst -sha256 -hmac "$SECRET" | awk '{print $2}')\ncurl -X POST "${url}" \\\n  -H "X-Signature: sha256=$SIG" \\\n  -H "Content-Type: application/json" \\\n  --data-raw "$BODY"`
     }
     return hook.channel === 'telegram'
       ? `$botToken = '<your-bot-token>'\n$webhookUrl = '${url}'\n$secretToken = '${hook.secret}'\n$body = @{ url = $webhookUrl; secret_token = $secretToken; allowed_updates = @('message'); drop_pending_updates = $true } | ConvertTo-Json -Compress\ncurl.exe -X POST "https://api.telegram.org/bot$botToken/setWebhook" \`\n  -H "Content-Type: application/json" \`\n  --data-raw $body`
-      : `$secret = '${hook.secret}'\n$body = '{"content":"hello"}'\n$bodyFile = Join-Path $env:TEMP 'webhook-body.json'\n[IO.File]::WriteAllText($bodyFile, $body, [Text.UTF8Encoding]::new($false))\n$bodyBytes = [IO.File]::ReadAllBytes($bodyFile)\n$hmac = [Security.Cryptography.HMACSHA256]::new([Text.Encoding]::UTF8.GetBytes($secret))\n$sig = [BitConverter]::ToString($hmac.ComputeHash($bodyBytes)).Replace('-', '').ToLower()\ncurl.exe -X POST "${url}" \`\n  -H "X-Signature: sha256=$sig" \`\n  -H "Content-Type: application/json" \`\n  --data-binary "@$bodyFile"`;
-  };
+      : `$secret = '${hook.secret}'\n$body = '{"content":"hello"}'\n$bodyFile = Join-Path $env:TEMP 'webhook-body.json'\n[IO.File]::WriteAllText($bodyFile, $body, [Text.UTF8Encoding]::new($false))\n$bodyBytes = [IO.File]::ReadAllBytes($bodyFile)\n$hmac = [Security.Cryptography.HMACSHA256]::new([Text.Encoding]::UTF8.GetBytes($secret))\n$sig = [BitConverter]::ToString($hmac.ComputeHash($bodyBytes)).Replace('-', '').ToLower()\ncurl.exe -X POST "${url}" \`\n  -H "X-Signature: sha256=$sig" \`\n  -H "Content-Type: application/json" \`\n  --data-binary "@$bodyFile"`
+  }
 
   return (
     <div className="p-8 overflow-y-auto">
@@ -176,7 +179,8 @@ const AgentWebhooksPage: React.FC = () => {
           <div className="text-center">
             <h2 className="text-3xl font-bold text-gray-800">入站 Webhook</h2>
             <p className="text-sm text-gray-600 mt-1">
-              通过 HTTP POST 触发 Agent 执行，请求需带 <code className="px-1 bg-black/10 rounded">X-Signature: sha256=&lt;HMAC&gt;</code>
+              通过 HTTP POST 触发 Agent 执行，请求需带{' '}
+              <code className="px-1 bg-black/10 rounded">X-Signature: sha256=&lt;HMAC&gt;</code>
             </p>
           </div>
           <button
@@ -198,9 +202,9 @@ const AgentWebhooksPage: React.FC = () => {
           </div>
         ) : (
           <div className="space-y-4">
-            {hooks.map(hook => {
-              const agent = agentMap.get(hook.agent_id);
-              const url = triggerUrl(hook);
+            {hooks.map((hook) => {
+              const agent = agentMap.get(hook.agent_id)
+              const url = triggerUrl(hook)
               return (
                 <div
                   key={hook.id}
@@ -209,7 +213,9 @@ const AgentWebhooksPage: React.FC = () => {
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1">
-                        <h3 className="font-semibold text-lg text-gray-800 truncate">{hook.name}</h3>
+                        <h3 className="font-semibold text-lg text-gray-800 truncate">
+                          {hook.name}
+                        </h3>
                         <span
                           className={`text-xs px-2 py-0.5 rounded-full border font-medium ${
                             hook.enabled
@@ -231,7 +237,9 @@ const AgentWebhooksPage: React.FC = () => {
                       </div>
                       <div className="text-sm text-gray-600">
                         绑定 Agent：
-                        {agent ? `${agent.avatar ?? ''} ${agent.description ?? `#${agent.id}`}` : `#${hook.agent_id}`}
+                        {agent
+                          ? `${agent.avatar ?? ''} ${agent.description ?? `#${agent.id}`}`
+                          : `#${hook.agent_id}`}
                       </div>
                       <div className="text-xs text-gray-500 mt-1">
                         触发次数 {hook.trigger_count}
@@ -260,7 +268,10 @@ const AgentWebhooksPage: React.FC = () => {
                         className="p-2 bg-gray-100 dark:bg-zinc-800 hover:bg-gray-200 dark:hover:bg-zinc-600 rounded-xl transition"
                         title={hook.enabled ? '停用' : '启用'}
                       >
-                        <Power size={15} className={hook.enabled ? 'text-emerald-600' : 'text-gray-600'} />
+                        <Power
+                          size={15}
+                          className={hook.enabled ? 'text-emerald-600' : 'text-gray-600'}
+                        />
                       </button>
                       <button
                         onClick={() => handleRegenerate(hook)}
@@ -279,7 +290,7 @@ const AgentWebhooksPage: React.FC = () => {
                     </div>
                   </div>
                 </div>
-              );
+              )
             })}
           </div>
         )}
@@ -296,7 +307,10 @@ const AgentWebhooksPage: React.FC = () => {
                 </div>
                 <h3 className="text-xl font-bold text-gray-800">新建 Webhook</h3>
               </div>
-              <button onClick={() => setShowCreate(false)} className="p-2 hover:bg-black/10 rounded-xl transition">
+              <button
+                onClick={() => setShowCreate(false)}
+                className="p-2 hover:bg-black/10 rounded-xl transition"
+              >
                 <X size={20} />
               </button>
             </div>
@@ -308,7 +322,7 @@ const AgentWebhooksPage: React.FC = () => {
                 <input
                   type="text"
                   value={name}
-                  onChange={e => setName(e.target.value)}
+                  onChange={(e) => setName(e.target.value)}
                   placeholder="如：GitHub 推送告警"
                   className="w-full px-4 py-2.5 bg-white dark:bg-zinc-800 border border-gray-300 dark:border-zinc-700 rounded-2xl focus:outline-none focus:ring-2 focus:ring-gray-400 dark:focus:ring-zinc-500/50 text-gray-800"
                 />
@@ -319,15 +333,17 @@ const AgentWebhooksPage: React.FC = () => {
                 </label>
                 <ThemedSelect
                   value={channel}
-                  onChange={value => setChannel(
-                    value === 'telegram'
-                      ? 'telegram'
-                      : value === 'dingtalk'
-                        ? 'dingtalk'
-                        : value === 'discord'
-                          ? 'discord'
-                          : 'generic'
-                  )}
+                  onChange={(value) =>
+                    setChannel(
+                      value === 'telegram'
+                        ? 'telegram'
+                        : value === 'dingtalk'
+                          ? 'dingtalk'
+                          : value === 'discord'
+                            ? 'discord'
+                            : 'generic'
+                    )
+                  }
                   options={[
                     { value: 'generic', label: '普通 HTTP Webhook' },
                     { value: 'telegram', label: 'Telegram Bot' },
@@ -343,11 +359,11 @@ const AgentWebhooksPage: React.FC = () => {
                 </label>
                 <ThemedSelect
                   value={agentId}
-                  onChange={value => setAgentId(value === '' ? '' : Number(value))}
+                  onChange={(value) => setAgentId(value === '' ? '' : Number(value))}
                   placeholder="请选择 Agent"
                   options={[
                     { value: '', label: '请选择 Agent' },
-                    ...agents.map(a => ({
+                    ...agents.map((a) => ({
                       value: a.id,
                       label: `${a.avatar ?? ''} ${a.description ?? `#${a.id}`}`,
                     })),
@@ -363,7 +379,7 @@ const AgentWebhooksPage: React.FC = () => {
                   <input
                     type="password"
                     value={telegramBotToken}
-                    onChange={e => setTelegramBotToken(e.target.value)}
+                    onChange={(e) => setTelegramBotToken(e.target.value)}
                     placeholder="123456:ABC-DEF..."
                     className="w-full px-4 py-2.5 bg-white dark:bg-zinc-800 border border-gray-300 dark:border-zinc-700 rounded-2xl focus:outline-none focus:ring-2 focus:ring-gray-400 dark:focus:ring-zinc-500/50 text-gray-800"
                   />
@@ -377,7 +393,7 @@ const AgentWebhooksPage: React.FC = () => {
                   <input
                     type="password"
                     value={dingtalkAppSecret}
-                    onChange={e => setDingtalkAppSecret(e.target.value)}
+                    onChange={(e) => setDingtalkAppSecret(e.target.value)}
                     placeholder="钉钉机器人应用的 AppSecret"
                     className="w-full px-4 py-2.5 bg-white dark:bg-zinc-800 border border-gray-300 dark:border-zinc-700 rounded-2xl focus:outline-none focus:ring-2 focus:ring-gray-400 dark:focus:ring-zinc-500/50 text-gray-800"
                   />
@@ -391,7 +407,7 @@ const AgentWebhooksPage: React.FC = () => {
                   <input
                     type="password"
                     value={discordPublicKey}
-                    onChange={e => setDiscordPublicKey(e.target.value)}
+                    onChange={(e) => setDiscordPublicKey(e.target.value)}
                     placeholder="Discord 应用 General Information 里的 Public Key"
                     className="w-full px-4 py-2.5 bg-white dark:bg-zinc-800 border border-gray-300 dark:border-zinc-700 rounded-2xl focus:outline-none focus:ring-2 focus:ring-gray-400 dark:focus:ring-zinc-500/50 text-gray-800"
                   />
@@ -425,7 +441,10 @@ const AgentWebhooksPage: React.FC = () => {
               <h3 className="text-xl font-bold text-gray-800">
                 {secretInfo.fresh ? '请立即复制 secret' : 'Webhook 密钥'}
               </h3>
-              <button onClick={() => setSecretInfo(null)} className="p-2 hover:bg-black/10 rounded-xl transition">
+              <button
+                onClick={() => setSecretInfo(null)}
+                className="p-2 hover:bg-black/10 rounded-xl transition"
+              >
                 <X size={20} />
               </button>
             </div>
@@ -435,7 +454,7 @@ const AgentWebhooksPage: React.FC = () => {
                   ? 'DingTalk AppSecret 已保存；将 URL 配到钉钉机器人 HTTP 模式即可。'
                   : secretInfo.webhook.channel === 'discord'
                     ? 'Discord Public Key 已保存；将 URL 配到 Discord Interactions Endpoint 即可。'
-                  : '此 secret 只显示这一次，关闭后将无法再次查看，请立刻保存。'}
+                    : '此 secret 只显示这一次，关闭后将无法再次查看，请立刻保存。'}
               </div>
               <div>
                 <label className="text-xs text-gray-600 mb-1 block">URL</label>
@@ -463,10 +482,12 @@ const AgentWebhooksPage: React.FC = () => {
                       ? '内部 Secret（钉钉无需配置）'
                       : secretInfo.webhook.channel === 'discord'
                         ? '内部 Secret（Discord 无需配置）'
-                      : 'Secret'}
+                        : 'Secret'}
                 </label>
                 <div className="flex items-center gap-2 bg-white dark:bg-zinc-900 rounded-2xl border border-gray-200 dark:border-zinc-800 px-3 py-2">
-                  <code className="flex-1 text-xs text-gray-700 break-all">{secretInfo.webhook.secret}</code>
+                  <code className="flex-1 text-xs text-gray-700 break-all">
+                    {secretInfo.webhook.secret}
+                  </code>
                   <button
                     onClick={() => copy('modal-secret', secretInfo.webhook.secret)}
                     className="p-1.5 hover:bg-gray-200 dark:hover:bg-zinc-600 rounded-lg transition"
@@ -481,36 +502,34 @@ const AgentWebhooksPage: React.FC = () => {
               </div>
               <div className="text-xs text-gray-600 bg-black/5 rounded-2xl overflow-hidden">
                 <div className="flex border-b border-black/10">
-                  {secretInfo.webhook.channel !== 'dingtalk' && secretInfo.webhook.channel !== 'discord' && (
-                    <>
-                      <button
-                        onClick={() => setCodeTab('bash')}
-                        className={`px-4 py-2 font-medium transition ${
-                          codeTab === 'bash'
-                            ? 'bg-black/10 text-gray-800'
-                            : 'hover:bg-black/5 text-gray-500'
-                        }`}
-                      >
-                        Bash / Git Bash
-                      </button>
-                      <button
-                        onClick={() => setCodeTab('powershell')}
-                        className={`px-4 py-2 font-medium transition ${
-                          codeTab === 'powershell'
-                            ? 'bg-black/10 text-gray-800'
-                            : 'hover:bg-black/5 text-gray-500'
-                        }`}
-                      >
-                        PowerShell
-                      </button>
-                    </>
-                  )}
+                  {secretInfo.webhook.channel !== 'dingtalk' &&
+                    secretInfo.webhook.channel !== 'discord' && (
+                      <>
+                        <button
+                          onClick={() => setCodeTab('bash')}
+                          className={`px-4 py-2 font-medium transition ${
+                            codeTab === 'bash'
+                              ? 'bg-black/10 text-gray-800'
+                              : 'hover:bg-black/5 text-gray-500'
+                          }`}
+                        >
+                          Bash / Git Bash
+                        </button>
+                        <button
+                          onClick={() => setCodeTab('powershell')}
+                          className={`px-4 py-2 font-medium transition ${
+                            codeTab === 'powershell'
+                              ? 'bg-black/10 text-gray-800'
+                              : 'hover:bg-black/5 text-gray-500'
+                          }`}
+                        >
+                          PowerShell
+                        </button>
+                      </>
+                    )}
                   <div className="flex-1 flex justify-end items-center pr-2">
                     <button
-                      onClick={() => copy(
-                        'modal-code',
-                        setupSnippet(secretInfo.webhook, codeTab)
-                      )}
+                      onClick={() => copy('modal-code', setupSnippet(secretInfo.webhook, codeTab))}
                       className="p-1.5 hover:bg-black/10 rounded-lg transition"
                       title="复制"
                     >
@@ -524,7 +543,7 @@ const AgentWebhooksPage: React.FC = () => {
                 </div>
                 <div className="px-4 py-3 leading-relaxed">
                   <pre className="whitespace-pre-wrap break-all">
-{setupSnippet(secretInfo.webhook, codeTab)}
+                    {setupSnippet(secretInfo.webhook, codeTab)}
                   </pre>
                 </div>
               </div>
@@ -533,7 +552,7 @@ const AgentWebhooksPage: React.FC = () => {
         </div>
       )}
     </div>
-  );
-};
+  )
+}
 
-export default AgentWebhooksPage;
+export default AgentWebhooksPage

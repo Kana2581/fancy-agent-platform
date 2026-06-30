@@ -3,10 +3,9 @@
 /* tslint:disable */
 /* eslint-disable */
 export type GenerateRequest = {
-    prompt: string;
-    negative_prompt?: string;
-    width?: number;
-    height?: number;
-    extra?: Record<string, any>;
-};
-
+  prompt: string
+  negative_prompt?: string
+  width?: number
+  height?: number
+  extra?: Record<string, any>
+}

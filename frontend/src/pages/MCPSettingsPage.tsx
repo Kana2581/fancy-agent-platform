@@ -1,66 +1,67 @@
-import React, { useEffect, useState } from 'react';
-import { Edit2, Trash2, Zap, Eye } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
-import { useAppContext } from '../context/AppContext';
-import Modal from '../components/Modal';
-import MCPForm from '../components/MCPForm';
-import { McpService } from '../api';
-
+import React, { useEffect, useState } from 'react'
+import { Edit2, Trash2, Zap, Eye } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+import { useAppContext } from '../context/AppContext'
+import Modal from '../components/Modal'
+import MCPForm from '../components/MCPForm'
+import { McpService } from '../api'
 
 const MCPSettingsPage: React.FC = () => {
-  const navigate = useNavigate();
-  const { mcpTools, setMCPTools, refreshMCPs } = useAppContext();
+  const navigate = useNavigate()
+  const { mcpTools, setMCPTools, refreshMCPs } = useAppContext()
 
   useEffect(() => {
-    refreshMCPs();
-  }, [refreshMCPs]);
+    void refreshMCPs()
+  }, [refreshMCPs])
 
-  const [showMCPModal, setShowMCPModal] = useState(false);
-  const [editingMCPItem, setEditingMCPItem] = useState<typeof mcpTools[0] | null>(null);
+  const [showMCPModal, setShowMCPModal] = useState(false)
+  const [editingMCPItem, setEditingMCPItem] = useState<(typeof mcpTools)[0] | null>(null)
   const [mcpForm, setMCPForm] = useState({
     mcp_name: '',
     transport: 'stdio',
     config_json: {},
-    is_enabled: true
-  });
+    is_enabled: true,
+  })
 
-  const openMCPModal = (mcp: typeof mcpTools[0] | null = null) => {
+  const openMCPModal = (mcp: (typeof mcpTools)[0] | null = null) => {
     if (mcp) {
-      setEditingMCPItem(mcp);
+      setEditingMCPItem(mcp)
       setMCPForm({
         mcp_name: mcp.mcp_name,
         transport: mcp.transport,
         config_json: mcp.config_json || {},
-        is_enabled: mcp.is_enabled
-      });
+        is_enabled: mcp.is_enabled,
+      })
     } else {
-      setEditingMCPItem(null);
-      setMCPForm({ mcp_name: '', transport: 'stdio', config_json: {}, is_enabled: true });
+      setEditingMCPItem(null)
+      setMCPForm({ mcp_name: '', transport: 'stdio', config_json: {}, is_enabled: true })
     }
-    setShowMCPModal(true);
-  };
+    setShowMCPModal(true)
+  }
 
   const saveMCP = async () => {
     if (editingMCPItem) {
-      const updated = await McpService.updateMcpApiV1McpsMcpIdPut(editingMCPItem.id, mcpForm);
-      setMCPTools(mcpTools.map(m => m.id === updated.id ? updated : m));
+      const updated = await McpService.updateMcpApiV1McpsMcpIdPut(editingMCPItem.id, mcpForm)
+      setMCPTools(mcpTools.map((m) => (m.id === updated.id ? updated : m)))
     } else {
-      const created = await McpService.createMcpApiV1McpsPost(mcpForm);
-      setMCPTools([...mcpTools, created]);
+      const created = await McpService.createMcpApiV1McpsPost(mcpForm)
+      setMCPTools([...mcpTools, created])
     }
-    setShowMCPModal(false);
-  };
+    setShowMCPModal(false)
+  }
 
   const deleteMCP = async (id: number) => {
-    if (!confirm('确定要删除这个 MCP 工具吗？')) return;
-    await McpService.deleteMcpApiV1McpsMcpIdDelete(id);
-    setMCPTools(mcpTools.filter(m => m.id !== id));
-  };
+    if (!confirm('确定要删除这个 MCP 工具吗？')) return
+    await McpService.deleteMcpApiV1McpsMcpIdDelete(id)
+    setMCPTools(mcpTools.filter((m) => m.id !== id))
+  }
 
-  const toggleMCP = async (tool: typeof mcpTools[0]) => {
-    const updated = await McpService.updateMcpApiV1McpsMcpIdPut(tool.id, { is_enabled: !tool.is_enabled });
-    setMCPTools(mcpTools.map(m => m.id === updated.id ? updated : m));
-  };
+  const toggleMCP = async (tool: (typeof mcpTools)[0]) => {
+    const updated = await McpService.updateMcpApiV1McpsMcpIdPut(tool.id, {
+      is_enabled: !tool.is_enabled,
+    })
+    setMCPTools(mcpTools.map((m) => (m.id === updated.id ? updated : m)))
+  }
 
   return (
     <div className="p-8 overflow-y-auto">
@@ -78,7 +79,7 @@ const MCPSettingsPage: React.FC = () => {
             </button>
           </div>
           <div className="space-y-3">
-            {mcpTools.map(tool => (
+            {mcpTools.map((tool) => (
               <div
                 key={tool.id}
                 onClick={() => navigate(`/mcp/${tool.id}`)}
@@ -104,20 +105,29 @@ const MCPSettingsPage: React.FC = () => {
                   </label>
                   <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                     <button
-                      onClick={(e) => { e.stopPropagation(); navigate(`/mcp/${tool.id}`); }}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        void navigate(`/mcp/${tool.id}`)
+                      }}
                       className="p-2.5 hover:bg-gray-200 dark:hover:bg-zinc-600 rounded-xl transition-all"
                       title="查看详情"
                     >
                       <Eye size={18} className="text-gray-700" />
                     </button>
                     <button
-                      onClick={(e) => { e.stopPropagation(); openMCPModal(tool); }}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        openMCPModal(tool)
+                      }}
                       className="p-2.5 hover:bg-gray-200 dark:hover:bg-zinc-600 rounded-xl transition-all"
                     >
                       <Edit2 size={18} className="text-gray-700" />
                     </button>
                     <button
-                      onClick={(e) => { e.stopPropagation(); deleteMCP(tool.id); }}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        void deleteMCP(tool.id)
+                      }}
                       className="p-2.5 hover:bg-red-100 text-red-600 rounded-xl transition-all"
                     >
                       <Trash2 size={18} />
@@ -130,7 +140,11 @@ const MCPSettingsPage: React.FC = () => {
         </div>
       </div>
 
-      <Modal show={showMCPModal} onClose={() => setShowMCPModal(false)} title={editingMCPItem ? '编辑 MCP 工具' : '添加 MCP 工具'}>
+      <Modal
+        show={showMCPModal}
+        onClose={() => setShowMCPModal(false)}
+        title={editingMCPItem ? '编辑 MCP 工具' : '添加 MCP 工具'}
+      >
         <MCPForm
           key={editingMCPItem?.id ?? 'new'}
           form={mcpForm}
@@ -140,7 +154,7 @@ const MCPSettingsPage: React.FC = () => {
         />
       </Modal>
     </div>
-  );
-};
+  )
+}
 
-export default MCPSettingsPage;
+export default MCPSettingsPage

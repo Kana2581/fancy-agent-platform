@@ -1,76 +1,70 @@
-import React, { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Zap, RefreshCw } from 'lucide-react';
-import { McpService, type ToolOut, type MCPOut } from '../api';
+import React, { useEffect, useState } from 'react'
+import { useParams, useNavigate } from 'react-router-dom'
+import { ArrowLeft, Zap, RefreshCw } from 'lucide-react'
+import { McpService, type ToolOut, type MCPOut } from '../api'
 
 /** 简单超时封装 */
 function withTimeout<T>(promise: Promise<T>, ms = 5000): Promise<T> {
   return Promise.race([
     promise,
-    new Promise<T>((_, reject) =>
-      setTimeout(() => reject(new Error('timeout')), ms)
-    ),
-  ]);
+    new Promise<T>((_, reject) => setTimeout(() => reject(new Error('timeout')), ms)),
+  ])
 }
 
 const MCPDetailPage: React.FC = () => {
-  const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate();
+  const { id } = useParams<{ id: string }>()
+  const navigate = useNavigate()
 
-  const [mcp, setMcp] = useState<MCPOut | null>(null);
-  const [mcpLoading, setMcpLoading] = useState(true);
+  const [mcp, setMcp] = useState<MCPOut | null>(null)
+  const [mcpLoading, setMcpLoading] = useState(true)
 
-  const [tools, setTools] = useState<ToolOut[]>([]);
-  const [toolsLoading, setToolsLoading] = useState(false);
-  const [toolsError, setToolsError] = useState<string | null>(null);
-  const [toolsLoaded, setToolsLoaded] = useState(false);
+  const [tools, setTools] = useState<ToolOut[]>([])
+  const [toolsLoading, setToolsLoading] = useState(false)
+  const [toolsError, setToolsError] = useState<string | null>(null)
+  const [toolsLoaded, setToolsLoaded] = useState(false)
 
   /** 加载 MCP 基本信息（页面一进来就拉） */
   useEffect(() => {
-    if (!id) return;
+    if (!id) return
 
-    setMcpLoading(true);
+    setMcpLoading(true)
     McpService.getMcpApiV1McpsMcpIdGet(Number(id))
       .then(setMcp)
       .catch(() => setMcp(null))
-      .finally(() => setMcpLoading(false));
-  }, [id]);
+      .finally(() => setMcpLoading(false))
+  }, [id])
 
   /** 延迟加载 tools */
   const loadTools = async () => {
-    if (!id || toolsLoading) return;
+    if (!id || toolsLoading) return
 
-    setToolsLoading(true);
-    setToolsError(null);
+    setToolsLoading(true)
+    setToolsError(null)
 
     try {
-      const data = await withTimeout(
-        McpService.getMcpToolsApiV1McpsMcpIdToolsGet(Number(id)),
-        5000
-      );
-      setTools(data);
-      setToolsLoaded(true);
+      const data = await withTimeout(McpService.getMcpToolsApiV1McpsMcpIdToolsGet(Number(id)), 5000)
+      setTools(data)
+      setToolsLoaded(true)
     } catch {
-      setToolsError('Tools 加载失败或超时');
+      setToolsError('Tools 加载失败或超时')
     } finally {
-      setToolsLoading(false);
+      setToolsLoading(false)
     }
-  };
+  }
 
   /* ---------- 页面状态 ---------- */
 
   if (mcpLoading) {
-    return <div className="p-8 text-gray-600">加载 MCP 信息中...</div>;
+    return <div className="p-8 text-gray-600">加载 MCP 信息中...</div>
   }
 
   if (!mcp) {
-    return <div className="p-8 text-red-500">MCP 不存在</div>;
+    return <div className="p-8 text-red-500">MCP 不存在</div>
   }
 
   return (
     <div className="p-8 overflow-y-auto">
       <div className="max-w-5xl mx-auto">
-
         {/* Header */}
         <div className="flex items-center gap-4 mb-8">
           <button
@@ -79,25 +73,16 @@ const MCPDetailPage: React.FC = () => {
           >
             <ArrowLeft size={20} />
           </button>
-          <h2 className="text-3xl font-bold text-gray-800">
-            MCP 详情
-          </h2>
+          <h2 className="text-3xl font-bold text-gray-800">MCP 详情</h2>
         </div>
 
         {/* MCP 基本信息 */}
         <div className="bg-white dark:bg-zinc-900 rounded-xl p-8 border border-gray-200 dark:border-zinc-700 mb-8">
           <div className="flex items-center gap-4">
-            <Zap
-              size={28}
-              className={mcp.is_enabled ? 'text-green-500' : 'text-gray-400'}
-            />
+            <Zap size={28} className={mcp.is_enabled ? 'text-green-500' : 'text-gray-400'} />
             <div>
-              <div className="text-xl font-semibold text-gray-800">
-                {mcp.mcp_name}
-              </div>
-              <div className="text-sm text-gray-600 mt-1">
-                Transport: {mcp.transport}
-              </div>
+              <div className="text-xl font-semibold text-gray-800">{mcp.mcp_name}</div>
+              <div className="text-sm text-gray-600 mt-1">Transport: {mcp.transport}</div>
             </div>
           </div>
         </div>
@@ -105,9 +90,7 @@ const MCPDetailPage: React.FC = () => {
         {/* Tools */}
         <div className="bg-white dark:bg-zinc-900 rounded-xl p-8 border border-gray-200 dark:border-zinc-700">
           <div className="flex items-center justify-between mb-6">
-            <h3 className="text-xl font-semibold text-gray-800">
-              Tools
-            </h3>
+            <h3 className="text-xl font-semibold text-gray-800">Tools</h3>
 
             {!toolsLoaded && (
               <button
@@ -122,9 +105,7 @@ const MCPDetailPage: React.FC = () => {
 
           {/* Tools loading */}
           {toolsLoading && (
-            <div className="text-sm text-gray-600">
-              正在从 MCP Server 拉取 tools…
-            </div>
+            <div className="text-sm text-gray-600">正在从 MCP Server 拉取 tools…</div>
           )}
 
           {/* Tools error */}
@@ -149,20 +130,14 @@ const MCPDetailPage: React.FC = () => {
                   key={index}
                   className="p-6 bg-gray-50 dark:bg-zinc-800 rounded-xl border border-gray-200 dark:border-zinc-700 hover:bg-gray-100 dark:hover:bg-zinc-700 transition-all"
                 >
-                  <div className="font-semibold text-gray-800 text-lg">
-                    {tool.name}
-                  </div>
+                  <div className="font-semibold text-gray-800 text-lg">{tool.name}</div>
 
-                  <div className="text-sm text-gray-600 mt-2">
-                    {tool.description}
-                  </div>
+                  <div className="text-sm text-gray-600 mt-2">{tool.description}</div>
 
                   <div className="mt-4">
-                    <div className="text-sm font-medium text-gray-700 mb-2">
-                      Parameters
-                    </div>
+                    <div className="text-sm font-medium text-gray-700 mb-2">Parameters</div>
                     <pre className="text-xs bg-black/5 rounded-xl p-4 overflow-x-auto">
-{JSON.stringify(tool.parameters, null, 2)}
+                      {JSON.stringify(tool.parameters, null, 2)}
                     </pre>
                   </div>
                 </div>
@@ -172,15 +147,12 @@ const MCPDetailPage: React.FC = () => {
 
           {/* Empty */}
           {!toolsLoading && toolsLoaded && tools.length === 0 && (
-            <div className="text-sm text-gray-500">
-              当前 MCP 没有暴露任何工具
-            </div>
+            <div className="text-sm text-gray-500">当前 MCP 没有暴露任何工具</div>
           )}
         </div>
-
       </div>
     </div>
-  );
-};
+  )
+}
 
-export default MCPDetailPage;
+export default MCPDetailPage

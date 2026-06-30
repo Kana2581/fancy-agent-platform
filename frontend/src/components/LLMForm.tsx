@@ -1,23 +1,23 @@
-import React, { useState } from 'react';
-import { Save, Plug, Loader2, CheckCircle2, XCircle, MessageCirclePlus } from 'lucide-react';
-import ThemedSelect from './ThemedSelect';
-import { LlmModelsService } from '../api';
+import React, { useState } from 'react'
+import { Save, Plug, Loader2, CheckCircle2, XCircle, MessageCirclePlus } from 'lucide-react'
+import ThemedSelect from './ThemedSelect'
+import { LlmModelsService } from '../api'
 
 interface LLMFormData {
-  provider: string;
-  model_name: string;
-  base_url: string;
-  api_key: string;
+  provider: string
+  model_name: string
+  base_url: string
+  api_key: string
 }
 
 interface LLMFormProps {
-  form: LLMFormData;
-  onChange: (form: LLMFormData) => void;
-  onSave: () => void | Promise<void>;
-  onSaveAndStart?: () => void | Promise<void>;
-  onCancel: () => void;
-  editingId?: number | null;
-  savingAction?: 'save' | 'start' | null;
+  form: LLMFormData
+  onChange: (form: LLMFormData) => void
+  onSave: () => void | Promise<void>
+  onSaveAndStart?: () => void | Promise<void>
+  onCancel: () => void
+  editingId?: number | null
+  savingAction?: 'save' | 'start' | null
 }
 
 const LLMForm: React.FC<LLMFormProps> = ({
@@ -29,13 +29,13 @@ const LLMForm: React.FC<LLMFormProps> = ({
   editingId,
   savingAction = null,
 }) => {
-  const [testing, setTesting] = useState(false);
-  const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
-  const isSaving = savingAction !== null;
+  const [testing, setTesting] = useState(false)
+  const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null)
+  const isSaving = savingAction !== null
 
   const handleTest = async () => {
-    setTesting(true);
-    setTestResult(null);
+    setTesting(true)
+    setTestResult(null)
     try {
       const res = await LlmModelsService.testLlmApiV1LlmTestPost({
         provider: form.provider,
@@ -43,16 +43,19 @@ const LLMForm: React.FC<LLMFormProps> = ({
         base_url: form.base_url || null,
         api_key: form.api_key || null,
         llm_id: editingId ?? null,
-      });
-      setTestResult(res);
+      })
+      setTestResult(res)
     } catch (e) {
-      const err = e as { body?: { detail?: unknown }; message?: string };
-      const detail = err?.body?.detail || err?.message || '请求失败';
-      setTestResult({ success: false, message: typeof detail === 'string' ? detail : JSON.stringify(detail) });
+      const err = e as { body?: { detail?: unknown }; message?: string }
+      const detail = err?.body?.detail || err?.message || '请求失败'
+      setTestResult({
+        success: false,
+        message: typeof detail === 'string' ? detail : JSON.stringify(detail),
+      })
     } finally {
-      setTesting(false);
+      setTesting(false)
     }
-  };
+  }
 
   return (
     <div className="space-y-5">
@@ -102,7 +105,9 @@ const LLMForm: React.FC<LLMFormProps> = ({
           placeholder="sk-..."
           className="w-full px-4 py-3 bg-white dark:bg-zinc-800 border border-gray-300 dark:border-zinc-700 rounded-xl focus:ring-1 focus:ring-gray-300 dark:focus:ring-zinc-600 focus:border-gray-500 dark:focus:border-zinc-400 outline-none transition-all text-gray-800 placeholder-gray-500"
         />
-        <p className="text-xs text-gray-600 mt-2">API Key 将被加密存储{editingId ? '，测试时留空会使用已保存的 Key' : ''}</p>
+        <p className="text-xs text-gray-600 mt-2">
+          API Key 将被加密存储{editingId ? '，测试时留空会使用已保存的 Key' : ''}
+        </p>
       </div>
 
       {testResult && (
@@ -136,7 +141,11 @@ const LLMForm: React.FC<LLMFormProps> = ({
           disabled={isSaving || !form.provider || !form.model_name}
           className="flex-1 px-4 py-3 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-2xl hover:opacity-90 transition-all flex items-center justify-center gap-2 font-medium disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
         >
-          {savingAction === 'save' ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />}
+          {savingAction === 'save' ? (
+            <Loader2 size={18} className="animate-spin" />
+          ) : (
+            <Save size={18} />
+          )}
           {savingAction === 'save' ? '保存中...' : '保存'}
         </button>
         {onSaveAndStart && (
@@ -145,7 +154,11 @@ const LLMForm: React.FC<LLMFormProps> = ({
             disabled={isSaving || !form.provider || !form.model_name}
             className="flex-1 px-4 py-3 bg-gray-900/80 text-white rounded-2xl hover:bg-gray-900 hover:shadow-lg transition-all flex items-center justify-center gap-2 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {savingAction === 'start' ? <Loader2 size={18} className="animate-spin" /> : <MessageCirclePlus size={18} />}
+            {savingAction === 'start' ? (
+              <Loader2 size={18} className="animate-spin" />
+            ) : (
+              <MessageCirclePlus size={18} />
+            )}
             {savingAction === 'start' ? '创建中...' : '保存并开始聊天'}
           </button>
         )}
@@ -158,7 +171,7 @@ const LLMForm: React.FC<LLMFormProps> = ({
         </button>
       </div>
     </div>
-  );
-};
+  )
+}
 
-export default LLMForm;
+export default LLMForm

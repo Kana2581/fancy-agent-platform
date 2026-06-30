@@ -1,4 +1,4 @@
-@import "tailwindcss";
+@import 'tailwindcss';
 
 /* Enable class-based dark mode scoped to the app root */
 @custom-variant dark (&:where(.dark, .dark *));

@@ -1,25 +1,25 @@
-import React, { useState } from 'react';
-import { Outlet } from 'react-router-dom';
+import React, { useState } from 'react'
+import { Outlet } from 'react-router-dom'
 
-import Sidebar from './Sidebar';
-import { useAppContext } from '../context/AppContext';
+import Sidebar from './Sidebar'
+import { useAppContext } from '../context/AppContext'
 
 const Layout: React.FC = () => {
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [isDark, setIsDark] = useState(() => {
-    const saved = localStorage.getItem('chat-theme');
-    return saved ? saved === 'dark' : false;
-  });
-  const { selectedSession, setSelectedSession } = useAppContext();
+    const saved = localStorage.getItem('chat-theme')
+    return saved ? saved === 'dark' : false
+  })
+  const { selectedSession, setSelectedSession } = useAppContext()
 
   const toggleTheme = () => {
     setIsDark((prev) => {
-      const next = !prev;
-      localStorage.setItem('chat-theme', next ? 'dark' : 'light');
-      window.dispatchEvent(new CustomEvent('themechange', { detail: { isDark: next } }));
-      return next;
-    });
-  };
+      const next = !prev
+      localStorage.setItem('chat-theme', next ? 'dark' : 'light')
+      window.dispatchEvent(new CustomEvent('themechange', { detail: { isDark: next } }))
+      return next
+    })
+  }
 
   return (
     <div
@@ -38,6 +38,6 @@ const Layout: React.FC = () => {
         <Outlet />
       </div>
     </div>
-  );
-};
-export default Layout;
+  )
+}
+export default Layout

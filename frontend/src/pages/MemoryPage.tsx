@@ -1,116 +1,121 @@
-import React, { useState, useEffect } from 'react';
-import { Trash2, ArrowLeft, Brain, Plus, Pencil, X, Check } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
-import type { UserMemoryOut } from '../api';
-import { UserMemoriesService } from '../api';
-import ThemedSelect from '../components/ThemedSelect';
+import React, { useState, useEffect } from 'react'
+import toast from 'react-hot-toast'
+import { Trash2, ArrowLeft, Brain, Plus, Pencil, X, Check } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+import type { UserMemoryOut } from '../api'
+import { UserMemoriesService } from '../api'
+import ThemedSelect from '../components/ThemedSelect'
 
-type MemoryTypeFilter = 'all' | 'core' | 'normal';
+type MemoryTypeFilter = 'all' | 'core' | 'normal'
 
 type MemoryForm = {
-  key: string;
-  content: string;
-  memory_type: 'core' | 'normal';
-  category: string;
-};
+  key: string
+  content: string
+  memory_type: 'core' | 'normal'
+  category: string
+}
 
 const emptyForm = (): MemoryForm => ({
   key: '',
   content: '',
   memory_type: 'normal',
   category: '',
-});
+})
 
 const MemoryPage: React.FC = () => {
-  const navigate = useNavigate();
-  const [memories, setMemories] = useState<UserMemoryOut[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [typeFilter, setTypeFilter] = useState<MemoryTypeFilter>('all');
-  const [categoryFilter, setCategoryFilter] = useState('');
+  const navigate = useNavigate()
+  const [memories, setMemories] = useState<UserMemoryOut[]>([])
+  const [loading, setLoading] = useState(true)
+  const [typeFilter, setTypeFilter] = useState<MemoryTypeFilter>('all')
+  const [categoryFilter, setCategoryFilter] = useState('')
 
   // Modal state
-  const [modalOpen, setModalOpen] = useState(false);
-  const [editingKey, setEditingKey] = useState<string | null>(null); // null = create
-  const [form, setForm] = useState<MemoryForm>(emptyForm());
-  const [saving, setSaving] = useState(false);
+  const [modalOpen, setModalOpen] = useState(false)
+  const [editingKey, setEditingKey] = useState<string | null>(null) // null = create
+  const [form, setForm] = useState<MemoryForm>(emptyForm())
+  const [saving, setSaving] = useState(false)
 
   const loadMemories = async () => {
-    setLoading(true);
+    setLoading(true)
     try {
       const data = await UserMemoriesService.listMemories(
         typeFilter === 'all' ? undefined : typeFilter,
-        categoryFilter.trim() || undefined,
-      );
-      setMemories(data);
+        categoryFilter.trim() || undefined
+      )
+      setMemories(data)
     } catch (e) {
-      console.error('加载记忆失败:', e);
+      console.error('加载记忆失败:', e)
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  };
+  }
 
-  useEffect(() => { loadMemories(); }, [typeFilter, categoryFilter]);
+  useEffect(() => {
+    void loadMemories()
+  }, [typeFilter, categoryFilter])
 
   const handleDelete = async (memory: UserMemoryOut) => {
-    if (!confirm(`确定要删除记忆「${memory.key}」吗？`)) return;
+    if (!confirm(`确定要删除记忆「${memory.key}」吗？`)) return
     try {
-      await UserMemoriesService.deleteMemory(memory.key);
-      setMemories(prev => prev.filter(m => m.id !== memory.id));
+      await UserMemoriesService.deleteMemory(memory.key)
+      setMemories((prev) => prev.filter((m) => m.id !== memory.id))
     } catch (e) {
-      console.error(e);
-      alert('删除失败');
+      console.error(e)
+      toast.error('删除失败')
     }
-  };
+  }
 
   const openCreate = () => {
-    setEditingKey(null);
-    setForm(emptyForm());
-    setModalOpen(true);
-  };
+    setEditingKey(null)
+    setForm(emptyForm())
+    setModalOpen(true)
+  }
 
   const openEdit = (memory: UserMemoryOut) => {
-    setEditingKey(memory.key);
+    setEditingKey(memory.key)
     setForm({
       key: memory.key,
       content: memory.content,
       memory_type: memory.memory_type,
       category: memory.category || '',
-    });
-    setModalOpen(true);
-  };
+    })
+    setModalOpen(true)
+  }
 
   const handleSave = async () => {
     if (!form.key.trim() || !form.content.trim()) {
-      alert('标识符和内容不能为空');
-      return;
+      toast.error('标识符和内容不能为空')
+      return
     }
-    setSaving(true);
+    setSaving(true)
     try {
       const saved = await UserMemoriesService.saveMemory({
         key: form.key.trim(),
         content: form.content.trim(),
         memory_type: form.memory_type,
         category: form.category.trim() || undefined,
-      });
-      setMemories(prev => {
-        const idx = prev.findIndex(m => m.key === saved.key);
+      })
+      setMemories((prev) => {
+        const idx = prev.findIndex((m) => m.key === saved.key)
         if (idx >= 0) {
-          const next = [...prev];
-          next[idx] = saved;
-          return next;
+          const next = [...prev]
+          next[idx] = saved
+          return next
         }
-        return [saved, ...prev];
-      });
-      setModalOpen(false);
+        return [saved, ...prev]
+      })
+      setModalOpen(false)
     } catch (e) {
-      console.error(e);
-      alert('保存失败');
+      console.error(e)
+      toast.error('保存失败')
     } finally {
-      setSaving(false);
+      setSaving(false)
     }
-  };
+  }
 
-  const categories = Array.from(new Set(memories.map(m => m.category).filter(Boolean))) as string[];
+  const categories = Array.from(
+    new Set(memories.map((m) => m.category).filter(Boolean))
+  ) as string[]
 
   return (
     <div className="p-8 overflow-y-auto">
@@ -142,7 +147,7 @@ const MemoryPage: React.FC = () => {
         {/* Filters */}
         <div className="flex items-center gap-3 mb-6 flex-wrap">
           <div className="flex gap-1 bg-white dark:bg-zinc-900 rounded-2xl p-1 border border-gray-200 dark:border-zinc-800">
-            {(['all', 'core', 'normal'] as MemoryTypeFilter[]).map(t => (
+            {(['all', 'core', 'normal'] as MemoryTypeFilter[]).map((t) => (
               <button
                 key={t}
                 onClick={() => setTypeFilter(t)}
@@ -160,11 +165,11 @@ const MemoryPage: React.FC = () => {
           {categories.length > 0 && (
             <ThemedSelect
               value={categoryFilter}
-              onChange={v => setCategoryFilter(v)}
+              onChange={(v) => setCategoryFilter(v)}
               placeholder="所有分类"
               options={[
                 { value: '', label: '所有分类' },
-                ...categories.map(c => ({ value: c, label: c })),
+                ...categories.map((c) => ({ value: c, label: c })),
               ]}
               className="px-3 py-2 bg-white dark:bg-zinc-800 border border-gray-300 dark:border-zinc-700 rounded-xl text-sm text-gray-700"
             />
@@ -181,12 +186,13 @@ const MemoryPage: React.FC = () => {
             <div className="text-5xl mb-4">🧠</div>
             <p className="text-gray-600 mb-2">暂无记忆</p>
             <p className="text-sm text-gray-500">
-              在 Agent 中开启「记忆管理」内置工具，Agent 会自动存取长期记忆；也可点击右上角手动新建。
+              在 Agent 中开启「记忆管理」内置工具，Agent
+              会自动存取长期记忆；也可点击右上角手动新建。
             </p>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-            {memories.map(memory => (
+            {memories.map((memory) => (
               <div
                 key={memory.id}
                 className="bg-white dark:bg-zinc-900 rounded-xl p-6 border border-gray-200 dark:border-zinc-700 group  hover:scale-[1.02] transition-all flex flex-col"
@@ -195,7 +201,11 @@ const MemoryPage: React.FC = () => {
                   <div className="flex-1 min-w-0 flex items-center gap-2">
                     <Brain
                       size={16}
-                      className={memory.memory_type === 'core' ? 'text-amber-500 shrink-0' : 'text-gray-600 dark:text-zinc-300 shrink-0'}
+                      className={
+                        memory.memory_type === 'core'
+                          ? 'text-amber-500 shrink-0'
+                          : 'text-gray-600 dark:text-zinc-300 shrink-0'
+                      }
                     />
                     <h3 className="font-semibold text-base text-gray-800 truncate">{memory.key}</h3>
                   </div>
@@ -280,7 +290,7 @@ const MemoryPage: React.FC = () => {
                 <input
                   type="text"
                   value={form.key}
-                  onChange={e => setForm(f => ({ ...f, key: e.target.value }))}
+                  onChange={(e) => setForm((f) => ({ ...f, key: e.target.value }))}
                   disabled={!!editingKey}
                   placeholder="如：用户偏好_语言"
                   className="w-full px-4 py-2.5 bg-white dark:bg-zinc-800 border border-gray-300 dark:border-zinc-700 rounded-2xl focus:outline-none focus:ring-1 focus:ring-gray-300 dark:focus:ring-zinc-600 focus:border-gray-500 dark:focus:border-zinc-400 text-gray-800 placeholder-gray-500 transition-all disabled:opacity-50 text-sm"
@@ -291,10 +301,10 @@ const MemoryPage: React.FC = () => {
               <div>
                 <label className="text-sm font-medium text-gray-700 mb-1 block">记忆级别</label>
                 <div className="flex gap-2">
-                  {(['normal', 'core'] as const).map(t => (
+                  {(['normal', 'core'] as const).map((t) => (
                     <button
                       key={t}
-                      onClick={() => setForm(f => ({ ...f, memory_type: t }))}
+                      onClick={() => setForm((f) => ({ ...f, memory_type: t }))}
                       className={`flex-1 py-2 rounded-2xl text-sm font-medium transition-all border ${
                         form.memory_type === t
                           ? t === 'core'
@@ -315,7 +325,7 @@ const MemoryPage: React.FC = () => {
                 <input
                   type="text"
                   value={form.category}
-                  onChange={e => setForm(f => ({ ...f, category: e.target.value }))}
+                  onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))}
                   placeholder="如：偏好、工作、生活"
                   className="w-full px-4 py-2.5 bg-white dark:bg-zinc-800 border border-gray-300 dark:border-zinc-700 rounded-2xl focus:outline-none focus:ring-1 focus:ring-gray-300 dark:focus:ring-zinc-600 focus:border-gray-500 dark:focus:border-zinc-400 text-gray-800 placeholder-gray-500 transition-all text-sm"
                 />
@@ -328,7 +338,7 @@ const MemoryPage: React.FC = () => {
                 </label>
                 <textarea
                   value={form.content}
-                  onChange={e => setForm(f => ({ ...f, content: e.target.value }))}
+                  onChange={(e) => setForm((f) => ({ ...f, content: e.target.value }))}
                   rows={5}
                   placeholder="记忆的详细内容…"
                   className="w-full px-4 py-2.5 bg-white dark:bg-zinc-800 border border-gray-300 dark:border-zinc-700 rounded-2xl focus:outline-none focus:ring-1 focus:ring-gray-300 dark:focus:ring-zinc-600 focus:border-gray-500 dark:focus:border-zinc-400 text-gray-800 placeholder-gray-500 resize-none transition-all text-sm"
@@ -356,7 +366,7 @@ const MemoryPage: React.FC = () => {
         </div>
       )}
     </div>
-  );
-};
+  )
+}
 
-export default MemoryPage;
+export default MemoryPage

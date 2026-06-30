@@ -1,23 +1,45 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useEffect, useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import {
-  Bot, Brain, FileText, Zap, Globe, Image, Wrench, ShieldCheck,
-  Hash, MessageSquare, Users, Cpu, Plug, Clock, BarChart2,
-  GalleryHorizontalEnd, ImageIcon, Palette, ChevronDown, ChevronUp,
-  ArrowRight, Database, Lightbulb, Network, Search, AlertCircle,
-} from 'lucide-react';
-import { HelpDocsService } from '../api';
-import type { HelpDocumentOut } from '../api';
-import type { HelpDocumentSummaryOut } from '../api';
+  Bot,
+  Brain,
+  FileText,
+  Zap,
+  Globe,
+  Image,
+  Wrench,
+  ShieldCheck,
+  Hash,
+  MessageSquare,
+  Users,
+  Cpu,
+  Plug,
+  Clock,
+  BarChart2,
+  GalleryHorizontalEnd,
+  ImageIcon,
+  Palette,
+  ChevronDown,
+  ChevronUp,
+  ArrowRight,
+  Database,
+  Lightbulb,
+  Network,
+  Search,
+  AlertCircle,
+} from 'lucide-react'
+import { HelpDocsService } from '../api'
+import type { HelpDocumentOut } from '../api'
+import type { HelpDocumentSummaryOut } from '../api'
 
 const groupColors: Record<string, string> = {
   对话区: 'bg-gray-100 dark:bg-zinc-800 border-gray-200 dark:border-zinc-700',
   配置区: 'bg-gray-100 dark:bg-zinc-800 border-gray-200 dark:border-zinc-700',
   知识增强: 'from-amber-400/20 to-orange-400/20 border-amber-300/30',
   扩展功能: 'from-emerald-400/20 to-teal-400/20 border-emerald-300/30',
-};
+}
 
-const groupOrder = ['对话区', '配置区', '知识增强', '扩展功能'];
+const groupOrder = ['对话区', '配置区', '知识增强', '扩展功能']
 
 const iconMap: Record<string, React.ReactNode> = {
   bot: <Bot size={20} />,
@@ -41,67 +63,68 @@ const iconMap: Record<string, React.ReactNode> = {
   database: <Database size={20} />,
   lightbulb: <Lightbulb size={20} />,
   network: <Network size={20} />,
-};
+}
 
 const renderIcon = (iconKey?: string | null, size: 'sm' | 'md' = 'md') => {
-  const icon = iconKey ? iconMap[iconKey] : null;
-  if (icon) return icon;
-  return size === 'sm' ? <FileText size={16} /> : <FileText size={20} />;
-};
+  const icon = iconKey ? iconMap[iconKey] : null
+  if (icon) return icon
+  return size === 'sm' ? <FileText size={16} /> : <FileText size={20} />
+}
 
 const HelpPage: React.FC = () => {
-  const navigate = useNavigate();
-  const [docs, setDocs] = useState<HelpDocumentSummaryOut[]>([]);
-  const [selectedDoc, setSelectedDoc] = useState<HelpDocumentOut | null>(null);
-  const [expandedGroup, setExpandedGroup] = useState<number | null>(0);
-  const [query, setQuery] = useState('');
-  const [loading, setLoading] = useState(true);
-  const [detailLoading, setDetailLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const navigate = useNavigate()
+  const [docs, setDocs] = useState<HelpDocumentSummaryOut[]>([])
+  const [selectedDoc, setSelectedDoc] = useState<HelpDocumentOut | null>(null)
+  const [expandedGroup, setExpandedGroup] = useState<number | null>(0)
+  const [query, setQuery] = useState('')
+  const [loading, setLoading] = useState(true)
+  const [detailLoading, setDetailLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    let cancelled = false;
+    let cancelled = false
 
     const loadDocs = async () => {
       try {
-        setLoading(true);
-        setError(null);
-        const data = await HelpDocsService.listHelpDocuments(0, 200);
+        setLoading(true)
+        setError(null)
+        const data = await HelpDocsService.listHelpDocuments(0, 200)
         if (!cancelled) {
-          setDocs(data);
+          setDocs(data)
         }
       } catch (err) {
-        console.error('加载帮助文档失败:', err);
+        console.error('加载帮助文档失败:', err)
         if (!cancelled) {
-          setError('帮助文档加载失败，请确认后端服务已启动且文档已导入。');
+          setError('帮助文档加载失败，请确认后端服务已启动且文档已导入。')
         }
       } finally {
         if (!cancelled) {
-          setLoading(false);
+          setLoading(false)
         }
       }
-    };
+    }
 
-    loadDocs();
+    void loadDocs()
     return () => {
-      cancelled = true;
-    };
-  }, []);
+      cancelled = true
+    }
+  }, [])
 
   const filteredDocs = useMemo(() => {
-    const keyword = query.trim().toLowerCase();
-    if (!keyword) return docs;
-    return docs.filter((doc) => (
-      doc.title.toLowerCase().includes(keyword)
-      || doc.summary.toLowerCase().includes(keyword)
-      || (doc.category ?? '').toLowerCase().includes(keyword)
-    ));
-  }, [docs, query]);
+    const keyword = query.trim().toLowerCase()
+    if (!keyword) return docs
+    return docs.filter(
+      (doc) =>
+        doc.title.toLowerCase().includes(keyword) ||
+        doc.summary.toLowerCase().includes(keyword) ||
+        (doc.category ?? '').toLowerCase().includes(keyword)
+    )
+  }, [docs, query])
 
-  const overview = filteredDocs.find((doc) => doc.doc_type === 'overview');
-  const agentComponents = filteredDocs.filter((doc) => doc.doc_type === 'agent_component');
-  const knowledgeFeatures = filteredDocs.filter((doc) => doc.doc_type === 'knowledge_feature');
-  const pageDocs = filteredDocs.filter((doc) => doc.doc_type === 'page');
+  const overview = filteredDocs.find((doc) => doc.doc_type === 'overview')
+  const agentComponents = filteredDocs.filter((doc) => doc.doc_type === 'agent_component')
+  const knowledgeFeatures = filteredDocs.filter((doc) => doc.doc_type === 'knowledge_feature')
+  const pageDocs = filteredDocs.filter((doc) => doc.doc_type === 'page')
 
   const pageGroups = groupOrder
     .map((category) => ({
@@ -109,20 +132,20 @@ const HelpPage: React.FC = () => {
       color: groupColors[category],
       pages: pageDocs.filter((doc) => doc.category === category),
     }))
-    .filter((group) => group.pages.length > 0);
+    .filter((group) => group.pages.length > 0)
 
   const loadDetail = async (slug: string) => {
     try {
-      setDetailLoading(true);
-      const doc = await HelpDocsService.getHelpDocument(slug);
-      setSelectedDoc(doc);
+      setDetailLoading(true)
+      const doc = await HelpDocsService.getHelpDocument(slug)
+      setSelectedDoc(doc)
     } catch (err) {
-      console.error('加载帮助文档详情失败:', err);
-      setError('帮助文档详情加载失败。');
+      console.error('加载帮助文档详情失败:', err)
+      setError('帮助文档详情加载失败。')
     } finally {
-      setDetailLoading(false);
+      setDetailLoading(false)
     }
-  };
+  }
 
   return (
     <div className="flex-1 overflow-y-auto p-6 space-y-8">
@@ -134,7 +157,9 @@ const HelpPage: React.FC = () => {
             </div>
             <div>
               <h1 className="text-2xl font-bold text-gray-800">{overview?.title ?? '使用帮助'}</h1>
-              <p className="text-sm text-gray-600 mt-0.5">{overview?.summary ?? '了解平台各功能模块，快速上手 Fancy Agent'}</p>
+              <p className="text-sm text-gray-600 mt-0.5">
+                {overview?.summary ?? '了解平台各功能模块，快速上手 Fancy Agent'}
+              </p>
             </div>
           </div>
           <div className="relative w-full lg:w-80">
@@ -153,13 +178,21 @@ const HelpPage: React.FC = () => {
           </div>
         )}
         <div className="mt-5 bg-gray-100 dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-2xl p-4">
-          <p className="text-xs font-semibold text-gray-700 dark:text-zinc-300 mb-2">推荐上手流程</p>
+          <p className="text-xs font-semibold text-gray-700 dark:text-zinc-300 mb-2">
+            推荐上手流程
+          </p>
           <div className="flex flex-wrap items-center gap-2 text-xs text-gray-700">
-            <span className="bg-gray-200 dark:bg-zinc-700 rounded-lg px-2.5 py-1">1. 添加语言模型</span>
+            <span className="bg-gray-200 dark:bg-zinc-700 rounded-lg px-2.5 py-1">
+              1. 添加语言模型
+            </span>
             <ArrowRight size={12} className="text-gray-400" />
-            <span className="bg-gray-200 dark:bg-zinc-700 rounded-lg px-2.5 py-1">2. 配置 MCP / API 工具（可选）</span>
+            <span className="bg-gray-200 dark:bg-zinc-700 rounded-lg px-2.5 py-1">
+              2. 配置 MCP / API 工具（可选）
+            </span>
             <ArrowRight size={12} className="text-gray-400" />
-            <span className="bg-gray-200 dark:bg-zinc-700 rounded-lg px-2.5 py-1">3. 创建 Agent</span>
+            <span className="bg-gray-200 dark:bg-zinc-700 rounded-lg px-2.5 py-1">
+              3. 创建 Agent
+            </span>
             <ArrowRight size={12} className="text-gray-400" />
             <span className="bg-gray-200 dark:bg-zinc-700 rounded-lg px-2.5 py-1">4. 开始对话</span>
           </div>
@@ -220,7 +253,9 @@ const HelpPage: React.FC = () => {
             </div>
             <div>
               <h2 className="text-lg font-bold text-gray-800">知识增强能力</h2>
-              <p className="text-xs text-gray-500 mt-0.5">让 Agent 拥有长期记忆、可复用技能与结构化知识</p>
+              <p className="text-xs text-gray-500 mt-0.5">
+                让 Agent 拥有长期记忆、可复用技能与结构化知识
+              </p>
             </div>
           </div>
 
@@ -287,25 +322,32 @@ const HelpPage: React.FC = () => {
 
           <div className="space-y-4">
             {pageGroups.map((group, gi) => (
-              <div key={group.label} className={`bg-${group.color} rounded-2xl border overflow-hidden`}>
+              <div
+                key={group.label}
+                className={`bg-${group.color} rounded-2xl border overflow-hidden`}
+              >
                 <button
                   type="button"
                   onClick={() => setExpandedGroup(expandedGroup === gi ? null : gi)}
                   className="w-full flex items-center justify-between px-5 py-3.5 hover:bg-gray-50 dark:bg-zinc-900 transition-all"
                 >
                   <span className="text-sm font-bold text-gray-800">{group.label}</span>
-                  {expandedGroup === gi
-                    ? <ChevronUp size={16} className="text-gray-600" />
-                    : <ChevronDown size={16} className="text-gray-600" />}
+                  {expandedGroup === gi ? (
+                    <ChevronUp size={16} className="text-gray-600" />
+                  ) : (
+                    <ChevronDown size={16} className="text-gray-600" />
+                  )}
                 </button>
 
-                <div className={`overflow-hidden transition-all duration-300 ${expandedGroup === gi ? 'max-h-[600px]' : 'max-h-0'}`}>
+                <div
+                  className={`overflow-hidden transition-all duration-300 ${expandedGroup === gi ? 'max-h-[600px]' : 'max-h-0'}`}
+                >
                   <div className="px-4 pb-4 grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                     {group.pages.map((doc) => (
                       <button
                         key={doc.slug}
                         type="button"
-                        onClick={() => doc.route ? navigate(doc.route) : loadDetail(doc.slug)}
+                        onClick={() => (doc.route ? navigate(doc.route) : loadDetail(doc.slug))}
                         className="bg-gray-100 dark:bg-zinc-800 hover:bg-white/35 rounded-xl border border-gray-200 dark:border-zinc-800 p-3.5 text-left flex gap-3 transition-all group"
                       >
                         <div className="w-8 h-8 rounded-lg bg-gray-200 dark:bg-zinc-700 flex items-center justify-center flex-shrink-0 text-gray-700 group-hover:scale-110 transition-transform">
@@ -315,10 +357,14 @@ const HelpPage: React.FC = () => {
                           <div className="flex items-center gap-1.5">
                             <p className="text-sm font-semibold text-gray-800">{doc.title}</p>
                             {doc.route && (
-                              <code className="text-xs text-gray-500 bg-gray-200 dark:bg-zinc-700 rounded px-1.5 py-0.5 font-mono">{doc.route}</code>
+                              <code className="text-xs text-gray-500 bg-gray-200 dark:bg-zinc-700 rounded px-1.5 py-0.5 font-mono">
+                                {doc.route}
+                              </code>
                             )}
                           </div>
-                          <p className="text-xs text-gray-600 mt-1 leading-relaxed">{doc.summary}</p>
+                          <p className="text-xs text-gray-600 mt-1 leading-relaxed">
+                            {doc.summary}
+                          </p>
                         </div>
                       </button>
                     ))}
@@ -330,7 +376,7 @@ const HelpPage: React.FC = () => {
         </div>
       )}
     </div>
-  );
-};
+  )
+}
 
-export default HelpPage;
+export default HelpPage

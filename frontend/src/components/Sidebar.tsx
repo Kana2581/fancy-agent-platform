@@ -1,21 +1,49 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { Moon, Sun, Trash2, ChevronLeft, ChevronRight, Edit2, Check, X, Search, ChevronUp, ChevronDown, Clock, Wrench, ImageIcon, MessageCircle, GalleryHorizontalEnd, BarChart2, LogOut, Cpu, Plug, FileText, HelpCircle, Zap, Brain, Network, Webhook, Eye } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
-import type { SessionOut } from '../api';
-import { SessionsService } from '../api';
-import { useAppContext } from '../context/AppContext';
-import { tokenManager } from '../utils/TokenManager';
-import { setupApiClient } from '../utils/ApiClient';
+import React, { useState, useEffect, useCallback } from 'react'
+import {
+  Moon,
+  Sun,
+  Trash2,
+  ChevronLeft,
+  ChevronRight,
+  Edit2,
+  Check,
+  X,
+  Search,
+  ChevronUp,
+  ChevronDown,
+  Clock,
+  Wrench,
+  ImageIcon,
+  MessageCircle,
+  GalleryHorizontalEnd,
+  BarChart2,
+  LogOut,
+  Cpu,
+  Plug,
+  FileText,
+  HelpCircle,
+  Zap,
+  Brain,
+  Network,
+  Webhook,
+  Eye,
+} from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+import type { SessionOut } from '../api'
+import { SessionsService } from '../api'
+import { useAppContext } from '../context/AppContext'
+import { tokenManager } from '../utils/TokenManager'
+import { setupApiClient } from '../utils/ApiClient'
 
-const PAGE_SIZE = 20;
+const PAGE_SIZE = 20
 
 interface SidebarProps {
-  collapsed: boolean;
-  onToggleCollapse: () => void;
-  isDark: boolean;
-  onToggleTheme: () => void;
-  selectedSession: string | null;
-  onSelectSession: (id: string) => void;
+  collapsed: boolean
+  onToggleCollapse: () => void
+  isDark: boolean
+  onToggleTheme: () => void
+  selectedSession: string | null
+  onSelectSession: (id: string) => void
 }
 
 const Sidebar: React.FC<SidebarProps> = ({
@@ -26,42 +54,42 @@ const Sidebar: React.FC<SidebarProps> = ({
   selectedSession,
   onSelectSession,
 }) => {
-  const navigate = useNavigate();
-  const { refreshSessionsTrigger, setSelectedSession } = useAppContext();
+  const navigate = useNavigate()
+  const { refreshSessionsTrigger, setSelectedSession } = useAppContext()
 
   const handleLogout = () => {
-    tokenManager.removeToken();
-    setupApiClient();
-    setSelectedSession(null);
-    navigate('/login', { replace: true });
-  };
+    tokenManager.removeToken()
+    setupApiClient()
+    setSelectedSession(null)
+    void navigate('/login', { replace: true })
+  }
 
-  const [mode, setMode] = useState<'chat' | 'image'>('chat');
-  const [sessions, setSessions] = useState<SessionOut[]>([]);
-  const [total, setTotal] = useState(0);
-  const [page, setPage] = useState(1);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [debouncedQuery, setDebouncedQuery] = useState('');
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [editingTitle, setEditingTitle] = useState('');
-  const [menuOpen, setMenuOpen] = useState(false);
+  const [mode, setMode] = useState<'chat' | 'image'>('chat')
+  const [sessions, setSessions] = useState<SessionOut[]>([])
+  const [total, setTotal] = useState(0)
+  const [page, setPage] = useState(1)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [debouncedQuery, setDebouncedQuery] = useState('')
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [editingTitle, setEditingTitle] = useState('')
+  const [menuOpen, setMenuOpen] = useState(false)
 
   const handleModeSwitch = (newMode: 'chat' | 'image') => {
-    setMode(newMode);
+    setMode(newMode)
     if (newMode === 'image') {
-      navigate('/image-studio');
+      void navigate('/image-studio')
     } else {
-      navigate('/chat');
+      void navigate('/chat')
     }
-  };
+  }
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      setDebouncedQuery(searchQuery);
-      setPage(1);
-    }, 400);
-    return () => clearTimeout(timer);
-  }, [searchQuery]);
+      setDebouncedQuery(searchQuery)
+      setPage(1)
+    }, 400)
+    return () => clearTimeout(timer)
+  }, [searchQuery])
 
   const fetchSessions = useCallback(async (query: string, pg: number) => {
     try {
@@ -69,64 +97,66 @@ const Sidebar: React.FC<SidebarProps> = ({
         undefined,
         query || undefined,
         pg,
-        PAGE_SIZE,
-      );
-      setSessions(result.items);
-      setTotal(result.total);
+        PAGE_SIZE
+      )
+      setSessions(result.items)
+      setTotal(result.total)
     } catch (e) {
-      console.error('加载会话失败:', e);
+      console.error('加载会话失败:', e)
     }
-  }, []);
+  }, [])
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- async data fetch; setState runs after await, not synchronously
-    fetchSessions(debouncedQuery, page);
-  }, [debouncedQuery, page, refreshSessionsTrigger, fetchSessions]);
+    void fetchSessions(debouncedQuery, page)
+  }, [debouncedQuery, page, refreshSessionsTrigger, fetchSessions])
 
-  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
 
   const handleEditStart = (id: string, currentTitle: string) => {
-    setEditingId(id);
-    setEditingTitle(currentTitle);
-  };
+    setEditingId(id)
+    setEditingTitle(currentTitle)
+  }
 
   const handleEditSave = async (id: string) => {
-    if (!editingTitle.trim()) return;
+    if (!editingTitle.trim()) return
     try {
-      const updated = await SessionsService.updateSessionApiV1SessionsSessionIdPut(id, { title: editingTitle.trim() });
-      setSessions((prev) => prev.map((s) => (s.id === id ? updated : s)));
+      const updated = await SessionsService.updateSessionApiV1SessionsSessionIdPut(id, {
+        title: editingTitle.trim(),
+      })
+      setSessions((prev) => prev.map((s) => (s.id === id ? updated : s)))
     } catch (e) {
-      console.error('更新会话标题失败:', e);
+      console.error('更新会话标题失败:', e)
     }
-    setEditingId(null);
-    setEditingTitle('');
-  };
+    setEditingId(null)
+    setEditingTitle('')
+  }
 
   const handleEditCancel = () => {
-    setEditingId(null);
-    setEditingTitle('');
-  };
+    setEditingId(null)
+    setEditingTitle('')
+  }
 
   const handleDelete = async (id: string) => {
     try {
-      await SessionsService.deleteSessionApiV1SessionsSessionIdDelete(id);
+      await SessionsService.deleteSessionApiV1SessionsSessionIdDelete(id)
       if (selectedSession === id) {
-        setSelectedSession(null);
-        navigate('/chat');
+        setSelectedSession(null)
+        void navigate('/chat')
       }
-      const newTotal = total - 1;
-      const newTotalPages = Math.max(1, Math.ceil(newTotal / PAGE_SIZE));
-      const targetPage = page > newTotalPages ? newTotalPages : page;
+      const newTotal = total - 1
+      const newTotalPages = Math.max(1, Math.ceil(newTotal / PAGE_SIZE))
+      const targetPage = page > newTotalPages ? newTotalPages : page
       if (targetPage !== page) {
-        setPage(targetPage);
+        setPage(targetPage)
       } else {
-        fetchSessions(debouncedQuery, page);
+        void fetchSessions(debouncedQuery, page)
       }
-      setTotal(newTotal);
+      setTotal(newTotal)
     } catch (e) {
-      console.error('删除会话失败:', e);
+      console.error('删除会话失败:', e)
     }
-  };
+  }
 
   const menuItems = [
     { icon: Cpu, label: '模型设置', path: '/llm-settings' },
@@ -142,7 +172,7 @@ const Sidebar: React.FC<SidebarProps> = ({
     { icon: Webhook, label: '入站 Webhook', path: '/webhooks' },
     { icon: Eye, label: '界面偏好', path: '/preferences' },
     { icon: HelpCircle, label: '使用帮助', path: '/help' },
-  ];
+  ]
 
   return (
     <>
@@ -224,7 +254,10 @@ const Sidebar: React.FC<SidebarProps> = ({
                   className="flex-1 bg-transparent text-sm text-gray-700 dark:text-zinc-300 placeholder-gray-400 dark:placeholder-zinc-500 outline-none"
                 />
                 {searchQuery && (
-                  <button onClick={() => setSearchQuery('')} className="text-gray-400 hover:text-gray-600 dark:hover:text-zinc-300">
+                  <button
+                    onClick={() => setSearchQuery('')}
+                    className="text-gray-400 hover:text-gray-600 dark:hover:text-zinc-300"
+                  >
                     <X size={13} />
                   </button>
                 )}
@@ -248,18 +281,26 @@ const Sidebar: React.FC<SidebarProps> = ({
                         value={editingTitle}
                         onChange={(e) => setEditingTitle(e.target.value)}
                         onKeyDown={(e) => {
-                          if (e.key === 'Enter') handleEditSave(session.id);
-                          if (e.key === 'Escape') handleEditCancel();
+                          if (e.key === 'Enter') void handleEditSave(session.id)
+                          if (e.key === 'Escape') handleEditCancel()
                         }}
                         className="px-2 py-1 rounded-lg bg-white dark:bg-zinc-700 border border-gray-300 dark:border-zinc-600 text-gray-800 dark:text-zinc-200 text-sm outline-none focus:ring-1 focus:ring-gray-400 dark:focus:ring-zinc-500"
                         placeholder="输入标题..."
                         autoFocus
                       />
                       <div className="flex gap-2 justify-end">
-                        <button onClick={() => handleEditSave(session.id)} className="p-1 hover:bg-gray-200 dark:hover:bg-zinc-600 rounded-lg transition-all" title="保存">
+                        <button
+                          onClick={() => handleEditSave(session.id)}
+                          className="p-1 hover:bg-gray-200 dark:hover:bg-zinc-600 rounded-lg transition-all"
+                          title="保存"
+                        >
                           <Check size={14} className="text-gray-700 dark:text-zinc-300" />
                         </button>
-                        <button onClick={handleEditCancel} className="p-1 hover:bg-gray-200 dark:hover:bg-zinc-600 rounded-lg transition-all" title="取消">
+                        <button
+                          onClick={handleEditCancel}
+                          className="p-1 hover:bg-gray-200 dark:hover:bg-zinc-600 rounded-lg transition-all"
+                          title="取消"
+                        >
                           <X size={14} className="text-gray-700 dark:text-zinc-300" />
                         </button>
                       </div>
@@ -267,8 +308,8 @@ const Sidebar: React.FC<SidebarProps> = ({
                   ) : (
                     <div
                       onClick={() => {
-                        onSelectSession(session.id);
-                        navigate(`/chat/${session.id}`);
+                        onSelectSession(session.id)
+                        void navigate(`/chat/${session.id}`)
                       }}
                     >
                       <div className="flex items-start justify-between">
@@ -282,14 +323,20 @@ const Sidebar: React.FC<SidebarProps> = ({
                         </div>
                         <div className="ml-2 flex gap-0.5 opacity-0 group-hover:opacity-100 transition-all">
                           <button
-                            onClick={(e) => { e.stopPropagation(); handleEditStart(session.id, session.title || ''); }}
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              handleEditStart(session.id, session.title || '')
+                            }}
                             className="p-1 hover:bg-gray-200 dark:hover:bg-zinc-600 rounded-lg transition-all"
                             title="编辑标题"
                           >
                             <Edit2 size={12} className="text-gray-500 dark:text-zinc-400" />
                           </button>
                           <button
-                            onClick={(e) => { e.stopPropagation(); handleDelete(session.id); }}
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              void handleDelete(session.id)
+                            }}
                             className="p-1 hover:bg-gray-200 dark:hover:bg-zinc-600 rounded-lg transition-all"
                             title="删除"
                           >
@@ -312,7 +359,9 @@ const Sidebar: React.FC<SidebarProps> = ({
                 >
                   <ChevronUp size={14} className="text-gray-600 dark:text-zinc-400" />
                 </button>
-                <span className="text-xs text-gray-500 dark:text-zinc-400">{page} / {totalPages}</span>
+                <span className="text-xs text-gray-500 dark:text-zinc-400">
+                  {page} / {totalPages}
+                </span>
                 <button
                   onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                   disabled={page === totalPages}
@@ -328,10 +377,18 @@ const Sidebar: React.FC<SidebarProps> = ({
                 onClick={() => setMenuOpen((v) => !v)}
                 className="w-full flex items-center justify-between px-3 py-2 bg-gray-50 dark:bg-zinc-800 hover:bg-gray-100 dark:hover:bg-zinc-700 rounded-xl transition-all"
               >
-                <span className="text-sm text-gray-700 dark:text-zinc-300">{menuOpen ? '收起' : '更多功能'}</span>
-                {menuOpen ? <ChevronUp size={14} className="text-gray-500 dark:text-zinc-400" /> : <ChevronDown size={14} className="text-gray-500 dark:text-zinc-400" />}
+                <span className="text-sm text-gray-700 dark:text-zinc-300">
+                  {menuOpen ? '收起' : '更多功能'}
+                </span>
+                {menuOpen ? (
+                  <ChevronUp size={14} className="text-gray-500 dark:text-zinc-400" />
+                ) : (
+                  <ChevronDown size={14} className="text-gray-500 dark:text-zinc-400" />
+                )}
               </button>
-              <div className={`overflow-hidden transition-all duration-200 ${menuOpen ? 'max-h-80 mt-1.5' : 'max-h-0'}`}>
+              <div
+                className={`overflow-hidden transition-all duration-200 ${menuOpen ? 'max-h-80 mt-1.5' : 'max-h-0'}`}
+              >
                 <div className="overflow-y-auto max-h-72 space-y-0.5">
                   {menuItems.map(({ icon: Icon, label, path }) => (
                     <button
@@ -366,7 +423,7 @@ const Sidebar: React.FC<SidebarProps> = ({
         {collapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
       </button>
     </>
-  );
-};
+  )
+}
 
-export default Sidebar;
+export default Sidebar

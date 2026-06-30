@@ -1,16 +1,30 @@
-import React, { useEffect, useState } from 'react';
-import { Plus, Trash2, Edit2, ChevronDown, ChevronUp, Clock, CheckCircle, XCircle, Loader, Mail, X, Maximize2, Play } from 'lucide-react';
-import ThemedSelect from '../components/ThemedSelect';
-import { AgentsService } from '../api';
-import type { AgentOut } from '../api';
-import { ScheduledTasksService } from '../api/services/ScheduledTasksService';
-import type { ScheduledTaskOut } from '../api/models/ScheduledTaskOut';
-import type { ScheduledTaskCreate } from '../api/models/ScheduledTaskCreate';
-import type { ScheduledTaskUpdate } from '../api/models/ScheduledTaskUpdate';
-import type { ScheduledTaskExecutionOut } from '../api/models/ScheduledTaskExecutionOut';
+import React, { useEffect, useState } from 'react'
+import {
+  Plus,
+  Trash2,
+  Edit2,
+  ChevronDown,
+  ChevronUp,
+  Clock,
+  CheckCircle,
+  XCircle,
+  Loader,
+  Mail,
+  X,
+  Maximize2,
+  Play,
+} from 'lucide-react'
+import ThemedSelect from '../components/ThemedSelect'
+import { AgentsService } from '../api'
+import type { AgentOut } from '../api'
+import { ScheduledTasksService } from '../api/services/ScheduledTasksService'
+import type { ScheduledTaskOut } from '../api/models/ScheduledTaskOut'
+import type { ScheduledTaskCreate } from '../api/models/ScheduledTaskCreate'
+import type { ScheduledTaskUpdate } from '../api/models/ScheduledTaskUpdate'
+import type { ScheduledTaskExecutionOut } from '../api/models/ScheduledTaskExecutionOut'
 
-const WEEKDAYS = ['周一', '周二', '周三', '周四', '周五', '周六', '周日'];
-const TIMEZONES = ['Asia/Shanghai', 'Asia/Tokyo', 'Europe/London', 'America/New_York', 'UTC'];
+const WEEKDAYS = ['周一', '周二', '周三', '周四', '周五', '周六', '周日']
+const TIMEZONES = ['Asia/Shanghai', 'Asia/Tokyo', 'Europe/London', 'America/New_York', 'UTC']
 
 const EMPTY_FORM: ScheduledTaskCreate = {
   agent_id: 0,
@@ -20,35 +34,33 @@ const EMPTY_FORM: ScheduledTaskCreate = {
   schedule_time: '08:00',
   schedule_day: null,
   timezone: 'Asia/Shanghai',
-};
+}
 
 function scheduleLabel(task: ScheduledTaskOut): string {
-  const time = task.schedule_time;
-  if (task.schedule_type === 'daily') return `每天 ${time}`;
-  if (task.schedule_type === 'weekly')
-    return `每周${WEEKDAYS[task.schedule_day ?? 0]} ${time}`;
-  if (task.schedule_type === 'monthly')
-    return `每月 ${task.schedule_day} 日 ${time}`;
-  return time;
+  const time = task.schedule_time
+  if (task.schedule_type === 'daily') return `每天 ${time}`
+  if (task.schedule_type === 'weekly') return `每周${WEEKDAYS[task.schedule_day ?? 0]} ${time}`
+  if (task.schedule_type === 'monthly') return `每月 ${task.schedule_day} 日 ${time}`
+  return time
 }
 
 function formatDt(dt: string | null): string {
-  if (!dt) return '—';
-  const s = dt.endsWith('Z') || dt.includes('+') ? dt : dt + 'Z';
-  return new Date(s).toLocaleString('zh-CN');
+  if (!dt) return '—'
+  const s = dt.endsWith('Z') || dt.includes('+') ? dt : dt + 'Z'
+  return new Date(s).toLocaleString('zh-CN')
 }
 
 // ── shared input styles ───────────────────────────────────────────────────────
 const inputCls =
-  'w-full bg-white dark:bg-zinc-800 border border-gray-300 dark:border-zinc-700 rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-cyan-300/60 placeholder-gray-500/70 text-gray-800';
+  'w-full bg-white dark:bg-zinc-800 border border-gray-300 dark:border-zinc-700 rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-cyan-300/60 placeholder-gray-500/70 text-gray-800'
 
 // ── Modal ────────────────────────────────────────────────────────────────────
 
 interface ModalProps {
-  agents: AgentOut[];
-  initial?: ScheduledTaskOut | null;
-  onClose: () => void;
-  onSave: (data: ScheduledTaskCreate | ScheduledTaskUpdate) => Promise<void>;
+  agents: AgentOut[]
+  initial?: ScheduledTaskOut | null
+  onClose: () => void
+  onSave: (data: ScheduledTaskCreate | ScheduledTaskUpdate) => Promise<void>
 }
 
 const TaskModal: React.FC<ModalProps> = ({ agents, initial, onClose, onSave }) => {
@@ -63,31 +75,36 @@ const TaskModal: React.FC<ModalProps> = ({ agents, initial, onClose, onSave }) =
           schedule_day: initial.schedule_day,
           timezone: initial.timezone,
         }
-      : { ...EMPTY_FORM },
-  );
-  const [saving, setSaving] = useState(false);
+      : { ...EMPTY_FORM }
+  )
+  const [saving, setSaving] = useState(false)
 
   const set = (key: keyof ScheduledTaskCreate, value: unknown) =>
-    setForm((f) => ({ ...f, [key]: value }));
+    setForm((f) => ({ ...f, [key]: value }))
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setSaving(true);
+    e.preventDefault()
+    setSaving(true)
     try {
-      await onSave(form);
-      onClose();
+      await onSave(form)
+      onClose()
     } finally {
-      setSaving(false);
+      setSaving(false)
     }
-  };
+  }
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/20 p-4">
       <div className="bg-gray-50 dark:bg-zinc-900 rounded-xl w-full max-w-lg shadow-sm border border-gray-200 dark:border-zinc-700 overflow-hidden">
         {/* Header */}
         <div className="sticky top-0 bg-gray-50 dark:bg-zinc-900 border-b border-gray-200 dark:border-zinc-800 px-6 py-4 flex items-center justify-between">
-          <h2 className="text-xl font-semibold text-gray-800">{initial ? '编辑任务' : '新建定时任务'}</h2>
-          <button onClick={onClose} className="p-2 hover:bg-gray-100 dark:hover:bg-zinc-700 rounded-full transition-all">
+          <h2 className="text-xl font-semibold text-gray-800">
+            {initial ? '编辑任务' : '新建定时任务'}
+          </h2>
+          <button
+            onClick={onClose}
+            className="p-2 hover:bg-gray-100 dark:hover:bg-zinc-700 rounded-full transition-all"
+          >
             <X size={20} className="text-gray-700" />
           </button>
         </div>
@@ -113,7 +130,10 @@ const TaskModal: React.FC<ModalProps> = ({ agents, initial, onClose, onSave }) =
                 value={form.agent_id || ''}
                 onChange={(v) => set('agent_id', Number(v))}
                 placeholder="请选择…"
-                options={agents.map((a) => ({ value: a.id, label: a.description || `Agent #${a.id}` }))}
+                options={agents.map((a) => ({
+                  value: a.id,
+                  label: a.description || `Agent #${a.id}`,
+                }))}
                 className={inputCls}
               />
             </div>
@@ -189,7 +209,10 @@ const TaskModal: React.FC<ModalProps> = ({ agents, initial, onClose, onSave }) =
                   <ThemedSelect
                     value={form.schedule_day ?? 1}
                     onChange={(v) => set('schedule_day', Number(v))}
-                    options={Array.from({ length: 31 }, (_, i) => ({ value: i + 1, label: `${i + 1} 号` }))}
+                    options={Array.from({ length: 31 }, (_, i) => ({
+                      value: i + 1,
+                      label: `${i + 1} 号`,
+                    }))}
                     className={inputCls}
                   />
                 </div>
@@ -227,245 +250,278 @@ const TaskModal: React.FC<ModalProps> = ({ agents, initial, onClose, onSave }) =
         </div>
       </div>
     </div>
-  );
-};
+  )
+}
 
 // ── Result detail Modal ──────────────────────────────────────────────────────
 
 interface ResultModalProps {
-  result: string;
-  onClose: () => void;
+  result: string
+  onClose: () => void
 }
 
 const ResultModal: React.FC<ResultModalProps> = ({ result, onClose }) => (
-  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/20 p-4" onClick={onClose}>
+  <div
+    className="fixed inset-0 z-50 flex items-center justify-center bg-black/20 p-4"
+    onClick={onClose}
+  >
     <div
       className="bg-gray-50 dark:bg-zinc-900 rounded-xl w-full max-w-2xl max-h-[80vh] shadow-sm border border-gray-200 dark:border-zinc-700 flex flex-col overflow-hidden"
       onClick={(e) => e.stopPropagation()}
     >
       <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-zinc-800 bg-gray-50 dark:bg-zinc-900">
         <h3 className="text-base font-semibold text-gray-800">执行结果详情</h3>
-        <button onClick={onClose} className="p-2 hover:bg-gray-100 dark:hover:bg-zinc-700 rounded-full transition-all">
+        <button
+          onClick={onClose}
+          className="p-2 hover:bg-gray-100 dark:hover:bg-zinc-700 rounded-full transition-all"
+        >
           <X size={18} className="text-gray-700" />
         </button>
       </div>
       <div className="p-6 overflow-y-auto flex-1">
-        <pre className="text-sm text-gray-700 whitespace-pre-wrap break-words font-sans">{result}</pre>
+        <pre className="text-sm text-gray-700 whitespace-pre-wrap break-words font-sans">
+          {result}
+        </pre>
       </div>
     </div>
   </div>
-);
+)
 
 // ── Execution history panel ──────────────────────────────────────────────────
 
 interface ExecutionPanelProps {
-  taskId: number;
-  refreshNonce?: number;
+  taskId: number
+  refreshNonce?: number
 }
 
 // 轮询配置：每 3 秒一轮，最多约 5 分钟；超过则停止（防止 running 记录卡死导致无限轮询）
-const POLL_INTERVAL_MS = 3000;
-const POLL_MAX_ROUNDS = 100;
+const POLL_INTERVAL_MS = 3000
+const POLL_MAX_ROUNDS = 100
 
 const ExecutionPanel: React.FC<ExecutionPanelProps> = ({ taskId, refreshNonce }) => {
-  const [items, setItems] = useState<ScheduledTaskExecutionOut[]>([]);
-  const [total, setTotal] = useState(0);
-  const [page, setPage] = useState(1);
-  const [loading, setLoading] = useState(false);
-  const [pollTimedOut, setPollTimedOut] = useState(false);
-  const [manualTick, setManualTick] = useState(0);
-  const [selectedResult, setSelectedResult] = useState<string | null>(null);
-  const pageSize = 10;
+  const [items, setItems] = useState<ScheduledTaskExecutionOut[]>([])
+  const [total, setTotal] = useState(0)
+  const [page, setPage] = useState(1)
+  const [loading, setLoading] = useState(false)
+  const [pollTimedOut, setPollTimedOut] = useState(false)
+  const [manualTick, setManualTick] = useState(0)
+  const [selectedResult, setSelectedResult] = useState<string | null>(null)
+  const pageSize = 10
 
   useEffect(() => {
-    let cancelled = false;
-    let timer: ReturnType<typeof setTimeout> | undefined;
-    let rounds = 0;
-    setPollTimedOut(false);
+    let cancelled = false
+    let timer: ReturnType<typeof setTimeout> | undefined
+    let rounds = 0
+    setPollTimedOut(false)
 
     // run_now 是后台异步执行，记录会先以 running 落库；轮询直到没有 running 状态或达到上限为止
     const fetchOnce = async (showLoading: boolean) => {
-      if (showLoading) setLoading(true);
+      if (showLoading) setLoading(true)
       try {
-        const res = await ScheduledTasksService.listExecutionsApiV1ScheduledTasksTaskIdExecutionsGet(taskId, page, pageSize);
-        if (cancelled) return;
-        setItems(res.items);
-        setTotal(res.total);
+        const res =
+          await ScheduledTasksService.listExecutionsApiV1ScheduledTasksTaskIdExecutionsGet(
+            taskId,
+            page,
+            pageSize
+          )
+        if (cancelled) return
+        setItems(res.items)
+        setTotal(res.total)
         if (res.items.some((ex) => ex.status === 'running')) {
-          rounds += 1;
+          rounds += 1
           if (rounds >= POLL_MAX_ROUNDS) {
-            setPollTimedOut(true);
-            return;
+            setPollTimedOut(true)
+            return
           }
-          timer = setTimeout(() => fetchOnce(false), POLL_INTERVAL_MS);
+          timer = setTimeout(() => {
+            void fetchOnce(false)
+          }, POLL_INTERVAL_MS)
         }
       } finally {
-        if (showLoading && !cancelled) setLoading(false);
+        if (showLoading && !cancelled) setLoading(false)
       }
-    };
+    }
 
-    fetchOnce(true);
+    void fetchOnce(true)
     return () => {
-      cancelled = true;
-      if (timer) clearTimeout(timer);
-    };
-  }, [taskId, page, refreshNonce, manualTick]);
+      cancelled = true
+      if (timer) clearTimeout(timer)
+    }
+  }, [taskId, page, refreshNonce, manualTick])
 
-  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  const totalPages = Math.max(1, Math.ceil(total / pageSize))
 
   const statusIcon = (status: string) => {
-    if (status === 'success') return <CheckCircle size={14} className="text-green-400" />;
-    if (status === 'failed') return <XCircle size={14} className="text-red-400" />;
-    return <Loader size={14} className="text-gray-600 dark:text-zinc-300 animate-spin" />;
-  };
+    if (status === 'success') return <CheckCircle size={14} className="text-green-400" />
+    if (status === 'failed') return <XCircle size={14} className="text-red-400" />
+    return <Loader size={14} className="text-gray-600 dark:text-zinc-300 animate-spin" />
+  }
 
   return (
     <>
-    {selectedResult !== null && (
-      <ResultModal result={selectedResult} onClose={() => setSelectedResult(null)} />
-    )}
-    <div className="mt-3 bg-gray-50 dark:bg-zinc-900 rounded-2xl p-4 border border-gray-200 dark:border-zinc-800 space-y-2">
-      <div className="text-xs font-semibold text-gray-500 mb-2">执行历史（共 {total} 条）</div>
-      {pollTimedOut && (
-        <div className="flex items-center gap-2 text-xs text-amber-600 bg-amber-400/10 rounded-lg p-2 border border-amber-300/30">
-          <span>任务执行时间较长，已停止自动刷新。</span>
-          <button
-            onClick={() => setManualTick((n) => n + 1)}
-            className="ml-auto px-2 py-0.5 rounded-lg bg-amber-400/20 hover:bg-amber-400/30 transition-all"
-          >
-            手动刷新
-          </button>
-        </div>
+      {selectedResult !== null && (
+        <ResultModal result={selectedResult} onClose={() => setSelectedResult(null)} />
       )}
-      {loading ? (
-        <div className="flex items-center gap-2 text-gray-500 text-sm py-2">
-          <Loader size={14} className="animate-spin" /> 加载中…
-        </div>
-      ) : items.length === 0 ? (
-        <div className="text-sm text-gray-500 py-2">暂无执行记录</div>
-      ) : (
-        <div className="space-y-2">
-          {items.map((ex) => (
-            <div key={ex.id} className="bg-white dark:bg-zinc-900 rounded-xl p-3 text-xs space-y-1 border border-gray-200 dark:border-zinc-800">
-              <div className="flex items-center gap-2">
-                {statusIcon(ex.status)}
-                <span className="font-medium text-gray-700">{ex.status}</span>
-                {ex.email_sent && (
-                  <span className="flex items-center gap-0.5 text-green-600 ml-1">
-                    <Mail size={11} /> 已发邮件
-                  </span>
-                )}
-                <span className="ml-auto text-gray-500">{formatDt(ex.started_at)}</span>
-              </div>
-              {ex.result && (
-                <div className="relative">
-                  <div className="text-gray-600 bg-gray-100 dark:bg-zinc-800 rounded-lg p-2 max-h-24 overflow-y-auto whitespace-pre-wrap pr-7">
-                    {ex.result}
-                  </div>
-                  <button
-                    onClick={() => setSelectedResult(ex.result!)}
-                    className="absolute top-1.5 right-1.5 p-0.5 hover:bg-gray-200 dark:hover:bg-zinc-600 rounded transition-all"
-                    title="查看完整结果"
-                  >
-                    <Maximize2 size={11} className="text-gray-500" />
-                  </button>
+      <div className="mt-3 bg-gray-50 dark:bg-zinc-900 rounded-2xl p-4 border border-gray-200 dark:border-zinc-800 space-y-2">
+        <div className="text-xs font-semibold text-gray-500 mb-2">执行历史（共 {total} 条）</div>
+        {pollTimedOut && (
+          <div className="flex items-center gap-2 text-xs text-amber-600 bg-amber-400/10 rounded-lg p-2 border border-amber-300/30">
+            <span>任务执行时间较长，已停止自动刷新。</span>
+            <button
+              onClick={() => setManualTick((n) => n + 1)}
+              className="ml-auto px-2 py-0.5 rounded-lg bg-amber-400/20 hover:bg-amber-400/30 transition-all"
+            >
+              手动刷新
+            </button>
+          </div>
+        )}
+        {loading ? (
+          <div className="flex items-center gap-2 text-gray-500 text-sm py-2">
+            <Loader size={14} className="animate-spin" /> 加载中…
+          </div>
+        ) : items.length === 0 ? (
+          <div className="text-sm text-gray-500 py-2">暂无执行记录</div>
+        ) : (
+          <div className="space-y-2">
+            {items.map((ex) => (
+              <div
+                key={ex.id}
+                className="bg-white dark:bg-zinc-900 rounded-xl p-3 text-xs space-y-1 border border-gray-200 dark:border-zinc-800"
+              >
+                <div className="flex items-center gap-2">
+                  {statusIcon(ex.status)}
+                  <span className="font-medium text-gray-700">{ex.status}</span>
+                  {ex.email_sent && (
+                    <span className="flex items-center gap-0.5 text-green-600 ml-1">
+                      <Mail size={11} /> 已发邮件
+                    </span>
+                  )}
+                  <span className="ml-auto text-gray-500">{formatDt(ex.started_at)}</span>
                 </div>
-              )}
-              {ex.error && (
-                <div className="text-red-500 bg-red-400/10 rounded-lg p-2 border border-red-300/20">{ex.error}</div>
-              )}
-            </div>
-          ))}
-          {totalPages > 1 && (
-            <div className="flex items-center justify-end gap-2 pt-1">
-              <button
-                onClick={() => setPage((p) => Math.max(1, p - 1))}
-                disabled={page === 1}
-                className="px-2 py-1 rounded-lg text-gray-600 hover:bg-gray-100 dark:hover:bg-zinc-700 disabled:opacity-30 text-xs transition-all"
-              >
-                上一页
-              </button>
-              <span className="text-gray-500 text-xs">{page}/{totalPages}</span>
-              <button
-                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                disabled={page === totalPages}
-                className="px-2 py-1 rounded-lg text-gray-600 hover:bg-gray-100 dark:hover:bg-zinc-700 disabled:opacity-30 text-xs transition-all"
-              >
-                下一页
-              </button>
-            </div>
-          )}
-        </div>
-      )}
-    </div>
+                {ex.result && (
+                  <div className="relative">
+                    <div className="text-gray-600 bg-gray-100 dark:bg-zinc-800 rounded-lg p-2 max-h-24 overflow-y-auto whitespace-pre-wrap pr-7">
+                      {ex.result}
+                    </div>
+                    <button
+                      onClick={() => setSelectedResult(ex.result)}
+                      className="absolute top-1.5 right-1.5 p-0.5 hover:bg-gray-200 dark:hover:bg-zinc-600 rounded transition-all"
+                      title="查看完整结果"
+                    >
+                      <Maximize2 size={11} className="text-gray-500" />
+                    </button>
+                  </div>
+                )}
+                {ex.error && (
+                  <div className="text-red-500 bg-red-400/10 rounded-lg p-2 border border-red-300/20">
+                    {ex.error}
+                  </div>
+                )}
+              </div>
+            ))}
+            {totalPages > 1 && (
+              <div className="flex items-center justify-end gap-2 pt-1">
+                <button
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  disabled={page === 1}
+                  className="px-2 py-1 rounded-lg text-gray-600 hover:bg-gray-100 dark:hover:bg-zinc-700 disabled:opacity-30 text-xs transition-all"
+                >
+                  上一页
+                </button>
+                <span className="text-gray-500 text-xs">
+                  {page}/{totalPages}
+                </span>
+                <button
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={page === totalPages}
+                  className="px-2 py-1 rounded-lg text-gray-600 hover:bg-gray-100 dark:hover:bg-zinc-700 disabled:opacity-30 text-xs transition-all"
+                >
+                  下一页
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
     </>
-  );
-};
+  )
+}
 
 // ── Main page ────────────────────────────────────────────────────────────────
 
 const ScheduledTasksPage: React.FC = () => {
-  const [tasks, setTasks] = useState<ScheduledTaskOut[]>([]);
-  const [agents, setAgents] = useState<AgentOut[]>([]);
-  const [showModal, setShowModal] = useState(false);
-  const [editing, setEditing] = useState<ScheduledTaskOut | null>(null);
-  const [expandedId, setExpandedId] = useState<number | null>(null);
-  const [runningIds, setRunningIds] = useState<Set<number>>(new Set());
-  const [runRefresh, setRunRefresh] = useState(0);
+  const [tasks, setTasks] = useState<ScheduledTaskOut[]>([])
+  const [agents, setAgents] = useState<AgentOut[]>([])
+  const [showModal, setShowModal] = useState(false)
+  const [editing, setEditing] = useState<ScheduledTaskOut | null>(null)
+  const [expandedId, setExpandedId] = useState<number | null>(null)
+  const [runningIds, setRunningIds] = useState<Set<number>>(new Set())
+  const [runRefresh, setRunRefresh] = useState(0)
 
   useEffect(() => {
-    loadData();
-  }, []);
+    void loadData()
+  }, [])
 
   const loadData = async () => {
     const [taskList, agentList] = await Promise.all([
       ScheduledTasksService.listTasksApiV1ScheduledTasksGet(),
       AgentsService.listAgentsApiV1AgentsGet(),
-    ]);
-    setTasks(taskList);
-    setAgents(agentList);
-  };
+    ])
+    setTasks(taskList)
+    setAgents(agentList)
+  }
 
   const agentName = (id: number) => {
-    const a = agents.find((ag) => ag.id === id);
-    return a?.description || `Agent #${id}`;
-  };
+    const a = agents.find((ag) => ag.id === id)
+    return a?.description || `Agent #${id}`
+  }
 
   const handleCreate = async (data: ScheduledTaskCreate | ScheduledTaskUpdate) => {
-    const created = await ScheduledTasksService.createTaskApiV1ScheduledTasksPost(data as ScheduledTaskCreate);
-    setTasks((prev) => [created, ...prev]);
-  };
+    const created = await ScheduledTasksService.createTaskApiV1ScheduledTasksPost(
+      data as ScheduledTaskCreate
+    )
+    setTasks((prev) => [created, ...prev])
+  }
 
   const handleUpdate = async (data: ScheduledTaskCreate | ScheduledTaskUpdate) => {
-    if (!editing) return;
-    const updated = await ScheduledTasksService.updateTaskApiV1ScheduledTasksTaskIdPut(editing.id, data as ScheduledTaskUpdate);
-    setTasks((prev) => prev.map((t) => (t.id === updated.id ? updated : t)));
-    setEditing(null);
-  };
+    if (!editing) return
+    const updated = await ScheduledTasksService.updateTaskApiV1ScheduledTasksTaskIdPut(
+      editing.id,
+      data as ScheduledTaskUpdate
+    )
+    setTasks((prev) => prev.map((t) => (t.id === updated.id ? updated : t)))
+    setEditing(null)
+  }
 
   const handleDelete = async (id: number) => {
-    if (!confirm('确认删除该任务？')) return;
-    await ScheduledTasksService.deleteTaskApiV1ScheduledTasksTaskIdDelete(id);
-    setTasks((prev) => prev.filter((t) => t.id !== id));
-    if (expandedId === id) setExpandedId(null);
-  };
+    if (!confirm('确认删除该任务？')) return
+    await ScheduledTasksService.deleteTaskApiV1ScheduledTasksTaskIdDelete(id)
+    setTasks((prev) => prev.filter((t) => t.id !== id))
+    if (expandedId === id) setExpandedId(null)
+  }
 
   const handleToggleEnabled = async (task: ScheduledTaskOut) => {
-    const updated = await ScheduledTasksService.updateTaskApiV1ScheduledTasksTaskIdPut(task.id, { is_enabled: !task.is_enabled });
-    setTasks((prev) => prev.map((t) => (t.id === updated.id ? updated : t)));
-  };
+    const updated = await ScheduledTasksService.updateTaskApiV1ScheduledTasksTaskIdPut(task.id, {
+      is_enabled: !task.is_enabled,
+    })
+    setTasks((prev) => prev.map((t) => (t.id === updated.id ? updated : t)))
+  }
 
   const handleRunNow = async (task: ScheduledTaskOut) => {
-    setRunningIds((prev) => new Set(prev).add(task.id));
+    setRunningIds((prev) => new Set(prev).add(task.id))
     try {
-      await ScheduledTasksService.runTaskNowApiV1ScheduledTasksTaskIdRunPost(task.id);
+      await ScheduledTasksService.runTaskNowApiV1ScheduledTasksTaskIdRunPost(task.id)
       // expand history panel so user can see the new execution；并触发刷新（面板已展开时也能重新拉取并轮询）
-      setExpandedId(task.id);
-      setRunRefresh((n) => n + 1);
+      setExpandedId(task.id)
+      setRunRefresh((n) => n + 1)
     } finally {
-      setRunningIds((prev) => { const s = new Set(prev); s.delete(task.id); return s; });
+      setRunningIds((prev) => {
+        const s = new Set(prev)
+        s.delete(task.id)
+        return s
+      })
     }
-  };
+  }
 
   return (
     <div className="flex-1 overflow-y-auto p-8">
@@ -474,10 +530,15 @@ const ScheduledTasksPage: React.FC = () => {
         <div className="flex items-center justify-between mb-8">
           <div>
             <h1 className="text-3xl font-bold text-gray-800">定时任务</h1>
-            <p className="text-sm text-gray-500 mt-1">配置 Agent 在指定时间自动执行指令，结果通过邮件发送给您</p>
+            <p className="text-sm text-gray-500 mt-1">
+              配置 Agent 在指定时间自动执行指令，结果通过邮件发送给您
+            </p>
           </div>
           <button
-            onClick={() => { setEditing(null); setShowModal(true); }}
+            onClick={() => {
+              setEditing(null)
+              setShowModal(true)
+            }}
             className="flex items-center gap-2 px-4 py-2.5 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-xl text-sm hover:opacity-90 transition-all font-medium"
           >
             <Plus size={16} />
@@ -526,9 +587,14 @@ const ScheduledTasksPage: React.FC = () => {
                         className="p-1.5 hover:bg-gray-200 dark:hover:bg-zinc-600 rounded-xl transition-all disabled:opacity-50"
                         title="立即执行"
                       >
-                        {runningIds.has(task.id)
-                          ? <Loader size={14} className="text-gray-600 dark:text-zinc-400 animate-spin" />
-                          : <Play size={14} className="text-gray-700 dark:text-zinc-300" />}
+                        {runningIds.has(task.id) ? (
+                          <Loader
+                            size={14}
+                            className="text-gray-600 dark:text-zinc-400 animate-spin"
+                          />
+                        ) : (
+                          <Play size={14} className="text-gray-700 dark:text-zinc-300" />
+                        )}
                       </button>
                       {/* Enable toggle */}
                       <button
@@ -541,7 +607,10 @@ const ScheduledTasksPage: React.FC = () => {
                         />
                       </button>
                       <button
-                        onClick={() => { setEditing(task); setShowModal(true); }}
+                        onClick={() => {
+                          setEditing(task)
+                          setShowModal(true)
+                        }}
                         className="p-1.5 hover:bg-gray-200 dark:hover:bg-zinc-600 rounded-xl transition-all"
                         title="编辑"
                       >
@@ -584,12 +653,15 @@ const ScheduledTasksPage: React.FC = () => {
         <TaskModal
           agents={agents}
           initial={editing}
-          onClose={() => { setShowModal(false); setEditing(null); }}
+          onClose={() => {
+            setShowModal(false)
+            setEditing(null)
+          }}
           onSave={editing ? handleUpdate : handleCreate}
         />
       )}
     </div>
-  );
-};
+  )
+}
 
-export default ScheduledTasksPage;
+export default ScheduledTasksPage

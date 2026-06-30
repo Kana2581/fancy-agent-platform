@@ -1,8 +1,8 @@
-import type { HelpDocumentOut } from '../models/HelpDocumentOut';
-import type { HelpDocumentSummaryOut } from '../models/HelpDocumentSummaryOut';
-import type { CancelablePromise } from '../core/CancelablePromise';
-import { OpenAPI } from '../core/OpenAPI';
-import { request as __request } from '../core/request';
+import type { HelpDocumentOut } from '../models/HelpDocumentOut'
+import type { HelpDocumentSummaryOut } from '../models/HelpDocumentSummaryOut'
+import type { CancelablePromise } from '../core/CancelablePromise'
+import { OpenAPI } from '../core/OpenAPI'
+import { request as __request } from '../core/request'
 
 export class HelpDocsService {
   public static listHelpDocuments(
@@ -10,7 +10,7 @@ export class HelpDocsService {
     limit: number = 100,
     q?: string,
     category?: string,
-    docType?: string,
+    docType?: string
   ): CancelablePromise<Array<HelpDocumentSummaryOut>> {
     return __request(OpenAPI, {
       method: 'GET',
@@ -25,7 +25,7 @@ export class HelpDocsService {
       errors: {
         422: 'Validation Error',
       },
-    });
+    })
   }
 
   public static getHelpDocument(slug: string): CancelablePromise<HelpDocumentOut> {
@@ -39,6 +39,6 @@ export class HelpDocsService {
         404: 'Help document not found',
         422: 'Validation Error',
       },
-    });
+    })
   }
 }

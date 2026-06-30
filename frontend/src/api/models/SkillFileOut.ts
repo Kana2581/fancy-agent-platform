@@ -1,5 +1,5 @@
 export type SkillFileOut = {
-    path: string;
-    content: string;
-    size: number;
-};
+  path: string
+  content: string
+  size: number
+}

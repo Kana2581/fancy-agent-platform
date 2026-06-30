@@ -1,54 +1,55 @@
-import React, { useEffect, useState } from 'react';
-import { Edit2, Loader2, MessageCirclePlus, Trash2 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
-import { useAppContext } from '../context/AppContext';
-import Modal from '../components/Modal';
-import LLMForm from '../components/LLMForm';
-import { AgentsService, LlmModelsService, SessionsService } from '../api';
-import type { LLMOut } from '../api';
-
+import React, { useEffect, useState } from 'react'
+import toast from 'react-hot-toast'
+import { Edit2, Loader2, MessageCirclePlus, Trash2 } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+import { useAppContext } from '../context/AppContext'
+import Modal from '../components/Modal'
+import LLMForm from '../components/LLMForm'
+import { AgentsService, LlmModelsService, SessionsService } from '../api'
+import type { LLMOut } from '../api'
 
 const LLMSettingsPage: React.FC = () => {
-  const navigate = useNavigate();
-  const { llmModels, setLLMModels, setAgents, refreshSessions, refreshLLMs, setSelectedSession } = useAppContext();
+  const navigate = useNavigate()
+  const { llmModels, setLLMModels, setAgents, refreshSessions, refreshLLMs, setSelectedSession } =
+    useAppContext()
 
   useEffect(() => {
-    refreshLLMs();
-  }, [refreshLLMs]);
+    void refreshLLMs()
+  }, [refreshLLMs])
 
-  const [showLLMModal, setShowLLMModal] = useState(false);
-  const [editingLLMItem, setEditingLLMItem] = useState<typeof llmModels[0] | null>(null);
-  const [savingAction, setSavingAction] = useState<'save' | 'start' | null>(null);
-  const [quickStartingModelId, setQuickStartingModelId] = useState<number | null>(null);
+  const [showLLMModal, setShowLLMModal] = useState(false)
+  const [editingLLMItem, setEditingLLMItem] = useState<(typeof llmModels)[0] | null>(null)
+  const [savingAction, setSavingAction] = useState<'save' | 'start' | null>(null)
+  const [quickStartingModelId, setQuickStartingModelId] = useState<number | null>(null)
   const [llmForm, setLLMForm] = useState({
     provider: 'OpenAI',
     model_name: '',
     base_url: '',
-    api_key: ''
-  });
+    api_key: '',
+  })
 
-  const openLLMModal = (llm: typeof llmModels[0] | null = null) => {
+  const openLLMModal = (llm: (typeof llmModels)[0] | null = null) => {
     if (llm) {
-      setEditingLLMItem(llm);
+      setEditingLLMItem(llm)
       setLLMForm({
         provider: llm.provider,
         model_name: llm.model_name,
         base_url: llm.base_url || '',
-        api_key: ''
-      });
+        api_key: '',
+      })
     } else {
-      setEditingLLMItem(null);
-      setLLMForm({ provider: 'OpenAI', model_name: '', base_url: '', api_key: '' });
+      setEditingLLMItem(null)
+      setLLMForm({ provider: 'OpenAI', model_name: '', base_url: '', api_key: '' })
     }
-    setShowLLMModal(true);
-  };
+    setShowLLMModal(true)
+  }
 
   const createAgentAndStartChat = async (llm: LLMOut, trackModelButton = false) => {
     if (trackModelButton) {
-      setQuickStartingModelId(llm.id);
+      setQuickStartingModelId(llm.id)
     }
 
-    let agentDescription = `${llm.provider} ${llm.model_name} 助手`;
+    let agentDescription = `${llm.provider} ${llm.model_name} 助手`
     try {
       const agent = await AgentsService.createAgentApiV1AgentsPost({
         avatar: '🤖',
@@ -58,65 +59,65 @@ const LLMSettingsPage: React.FC = () => {
         max_token_size: 4096,
         human_in_the_loop: false,
         mcp_ids: [],
-      });
-      agentDescription = agent.description || agentDescription;
-      setAgents(prev => prev.some(item => item.id === agent.id) ? prev : [...prev, agent]);
+      })
+      agentDescription = agent.description || agentDescription
+      setAgents((prev) => (prev.some((item) => item.id === agent.id) ? prev : [...prev, agent]))
 
       try {
         const session = await SessionsService.createSessionApiV1SessionsPost({
           agent_id: agent.id,
           title: `与${agentDescription}的新会话`,
           is_active: true,
-        });
-        refreshSessions();
-        setSelectedSession(session.id);
-        navigate(`/chat/${session.id}`);
-        return true;
+        })
+        refreshSessions()
+        setSelectedSession(session.id)
+        void navigate(`/chat/${session.id}`)
+        return true
       } catch (error) {
-        console.error('创建会话失败:', error);
-        alert('会话创建失败，请在 Agents 页面开始对话');
-        return false;
+        console.error('创建会话失败:', error)
+        toast.error('会话创建失败，请在 Agents 页面开始对话')
+        return false
       }
     } catch (error) {
-      console.error('创建 Agent 失败:', error);
-      alert('Agent 创建失败，请稍后在 Agents 页面手动创建');
-      return false;
+      console.error('创建 Agent 失败:', error)
+      toast.error('Agent 创建失败，请稍后在 Agents 页面手动创建')
+      return false
     } finally {
       if (trackModelButton) {
-        setQuickStartingModelId(null);
+        setQuickStartingModelId(null)
       }
     }
-  };
+  }
 
   const saveLLM = async (startChat = false) => {
-    setSavingAction(startChat ? 'start' : 'save');
+    setSavingAction(startChat ? 'start' : 'save')
     try {
-      let saved: LLMOut;
+      let saved: LLMOut
       if (editingLLMItem) {
-        saved = await LlmModelsService.updateLlmApiV1LlmLlmIdPut(editingLLMItem.id, llmForm);
-        setLLMModels(prev => prev.map(l => l.id === saved.id ? saved : l));
+        saved = await LlmModelsService.updateLlmApiV1LlmLlmIdPut(editingLLMItem.id, llmForm)
+        setLLMModels((prev) => prev.map((l) => (l.id === saved.id ? saved : l)))
       } else {
-        saved = await LlmModelsService.createLlmApiV1LlmPost(llmForm);
-        setLLMModels(prev => [...prev, saved]);
+        saved = await LlmModelsService.createLlmApiV1LlmPost(llmForm)
+        setLLMModels((prev) => [...prev, saved])
       }
 
-      setShowLLMModal(false);
+      setShowLLMModal(false)
       if (startChat) {
-        await createAgentAndStartChat(saved);
+        await createAgentAndStartChat(saved)
       }
     } catch (error) {
-      console.error('保存模型失败:', error);
-      alert('保存模型失败');
+      console.error('保存模型失败:', error)
+      toast.error('保存模型失败')
     } finally {
-      setSavingAction(null);
+      setSavingAction(null)
     }
-  };
+  }
 
   const deleteLLM = async (id: number) => {
-    if (!confirm('确定要删除这个 LLM 模型吗？')) return;
-    await LlmModelsService.deleteLlmApiV1LlmLlmIdDelete(id);
-    setLLMModels(llmModels.filter(l => l.id !== id));
-  };
+    if (!confirm('确定要删除这个 LLM 模型吗？')) return
+    await LlmModelsService.deleteLlmApiV1LlmLlmIdDelete(id)
+    setLLMModels(llmModels.filter((l) => l.id !== id))
+  }
 
   return (
     <div className="p-8 overflow-y-auto">
@@ -134,8 +135,11 @@ const LLMSettingsPage: React.FC = () => {
             </button>
           </div>
           <div className="space-y-3">
-            {llmModels.map(model => (
-              <div key={model.id} className="flex items-center justify-between p-5 bg-white dark:bg-zinc-900 rounded-2xl group hover:bg-gray-100 dark:hover:bg-zinc-700 transition-all border border-gray-200 dark:border-zinc-800">
+            {llmModels.map((model) => (
+              <div
+                key={model.id}
+                className="flex items-center justify-between p-5 bg-white dark:bg-zinc-900 rounded-2xl group hover:bg-gray-100 dark:hover:bg-zinc-700 transition-all border border-gray-200 dark:border-zinc-800"
+              >
                 <div>
                   <div className="font-semibold text-gray-800">{model.model_name}</div>
                   <div className="text-sm text-gray-600 mt-1">{model.provider}</div>
@@ -172,7 +176,11 @@ const LLMSettingsPage: React.FC = () => {
         </div>
       </div>
 
-      <Modal show={showLLMModal} onClose={() => setShowLLMModal(false)} title={editingLLMItem ? '编辑 LLM 模型' : '添加 LLM 模型'}>
+      <Modal
+        show={showLLMModal}
+        onClose={() => setShowLLMModal(false)}
+        title={editingLLMItem ? '编辑 LLM 模型' : '添加 LLM 模型'}
+      >
         <LLMForm
           form={llmForm}
           onChange={setLLMForm}
@@ -184,7 +192,7 @@ const LLMSettingsPage: React.FC = () => {
         />
       </Modal>
     </div>
-  );
-};
+  )
+}
 
-export default LLMSettingsPage;
+export default LLMSettingsPage

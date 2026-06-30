@@ -16,37 +16,37 @@
  * `downloadProtected` 字段把这层规则物化出来，组件不需要重新推断。
  */
 
-import type { ChatFileResponse } from '../api/models/ChatFileResponse';
-import type { SimpleFile } from '../api/models/SimpleFile';
-import type { WorkspaceFileOut } from '../api/models/WorkspaceFileOut';
-import type { GeneratedImageOut } from '../api/models/GeneratedImageOut';
+import type { ChatFileResponse } from '../api/models/ChatFileResponse'
+import type { SimpleFile } from '../api/models/SimpleFile'
+import type { WorkspaceFileOut } from '../api/models/WorkspaceFileOut'
+import type { GeneratedImageOut } from '../api/models/GeneratedImageOut'
 
-export type FileRefKind = 'upload' | 'workspace' | 'generated';
+export type FileRefKind = 'upload' | 'workspace' | 'generated'
 
 export interface FileRef {
   /** 后端主键（ChatFile.id 或 GeneratedImage.id）。同一 kind 内唯一。 */
-  id: number;
+  id: number
   /** 显示用文件名。SimpleFile 没有文件名时退化为 `file-${id}`。 */
-  name: string;
+  name: string
   /** 直链 URL。workspace 文件没有公开 URL，此处为空字符串，调用方应改用 downloadFile()。 */
-  url: string;
+  url: string
   /** 文件大小（字节）。SimpleFile 不携带，可能为 undefined。 */
-  size?: number;
+  size?: number
   /** MIME 类型。SimpleFile/Workspace 不一定带，可能为 undefined。 */
-  mime?: string;
+  mime?: string
   /** 文件扩展名（不含点）。生图统一为 'png'。 */
-  ext?: string;
+  ext?: string
   /** 决定下载策略与渲染权限。 */
-  kind: FileRefKind;
+  kind: FileRefKind
   /** true → 必须 fetch+JWT 下载，false → 公开 URL 可直接渲染/下载。 */
-  downloadProtected: boolean;
+  downloadProtected: boolean
 }
 
 function inferExtFromName(name: string | null | undefined): string | undefined {
-  if (!name) return undefined;
-  const dot = name.lastIndexOf('.');
-  if (dot < 0 || dot === name.length - 1) return undefined;
-  return name.slice(dot + 1).toLowerCase();
+  if (!name) return undefined
+  const dot = name.lastIndexOf('.')
+  if (dot < 0 || dot === name.length - 1) return undefined
+  return name.slice(dot + 1).toLowerCase()
 }
 
 export function fromChatFileResponse(f: ChatFileResponse): FileRef {
@@ -59,7 +59,7 @@ export function fromChatFileResponse(f: ChatFileResponse): FileRef {
     ext: f.file_ext,
     kind: f.storage_type === 'workspace' ? 'workspace' : 'upload',
     downloadProtected: f.storage_type === 'workspace',
-  };
+  }
 }
 
 export function fromSimpleFile(f: SimpleFile): FileRef {
@@ -71,7 +71,7 @@ export function fromSimpleFile(f: SimpleFile): FileRef {
     ext: inferExtFromName(f.url),
     kind: 'upload',
     downloadProtected: false,
-  };
+  }
 }
 
 export function fromWorkspaceFileOut(f: WorkspaceFileOut): FileRef {
@@ -83,7 +83,7 @@ export function fromWorkspaceFileOut(f: WorkspaceFileOut): FileRef {
     ext: f.ext,
     kind: 'workspace',
     downloadProtected: true,
-  };
+  }
 }
 
 export function fromGeneratedImageOut(f: GeneratedImageOut): FileRef {
@@ -95,7 +95,7 @@ export function fromGeneratedImageOut(f: GeneratedImageOut): FileRef {
     ext: 'png',
     kind: 'generated',
     downloadProtected: false,
-  };
+  }
 }
 
 /**
@@ -104,28 +104,31 @@ export function fromGeneratedImageOut(f: GeneratedImageOut): FileRef {
  */
 export async function downloadFileRef(
   ref: FileRef,
-  workspaceDownloader: (id: number, fallbackName: string) => Promise<{ blob: Blob; filename: string }>,
+  workspaceDownloader: (
+    id: number,
+    fallbackName: string
+  ) => Promise<{ blob: Blob; filename: string }>
 ): Promise<void> {
   if (ref.downloadProtected) {
-    const { blob, filename } = await workspaceDownloader(ref.id, ref.name);
-    const blobUrl = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = blobUrl;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    URL.revokeObjectURL(blobUrl);
-    return;
+    const { blob, filename } = await workspaceDownloader(ref.id, ref.name)
+    const blobUrl = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = blobUrl
+    a.download = filename
+    document.body.appendChild(a)
+    a.click()
+    a.remove()
+    URL.revokeObjectURL(blobUrl)
+    return
   }
 
   if (!ref.url) {
-    throw new Error(`FileRef #${ref.id} has no URL and is not download-protected`);
+    throw new Error(`FileRef #${ref.id} has no URL and is not download-protected`)
   }
-  const a = document.createElement('a');
-  a.href = ref.url;
-  a.download = ref.name;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
+  const a = document.createElement('a')
+  a.href = ref.url
+  a.download = ref.name
+  document.body.appendChild(a)
+  a.click()
+  a.remove()
 }

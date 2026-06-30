@@ -3,9 +3,8 @@
 /* tslint:disable */
 /* eslint-disable */
 export type MCPUpdate = {
-    mcp_name?: (string | null);
-    transport?: (string | null);
-    config_json?: (Record<string, any> | null);
-    is_enabled?: (boolean | null);
-};
-
+  mcp_name?: string | null
+  transport?: string | null
+  config_json?: Record<string, any> | null
+  is_enabled?: boolean | null
+}

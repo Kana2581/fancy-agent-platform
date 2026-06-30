@@ -1,9 +1,8 @@
 /* generated using openapi-typescript-codegen -- do not edit */
 /* istanbul ignore file */
 /* tslint:disable */
- 
-export type LoginRequest = {
-    username: string;
-    password: string;
-};
 
+export type LoginRequest = {
+  username: string
+  password: string
+}
