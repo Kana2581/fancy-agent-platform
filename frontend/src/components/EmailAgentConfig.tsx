@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import toast from 'react-hot-toast'
 import { Mail, Save, Trash2, ToggleLeft, ToggleRight } from 'lucide-react'
 import ThemedSelect from './ThemedSelect'
 import { useAppContext } from '../context/AppContext'
@@ -33,7 +34,7 @@ const EmailAgentConfig: React.FC = () => {
 
   const handleSave = async () => {
     if (!selectedAgentId) {
-      alert('请选择一个 Agent')
+      toast.error('请选择一个 Agent')
       return
     }
     setLoading(true)
@@ -53,7 +54,7 @@ const EmailAgentConfig: React.FC = () => {
       }
     } catch (e) {
       console.error(e)
-      alert('保存失败')
+      toast.error('保存失败')
     } finally {
       setLoading(false)
     }
@@ -69,7 +70,7 @@ const EmailAgentConfig: React.FC = () => {
       setIsEnabled(true)
     } catch (e) {
       console.error(e)
-      alert('删除失败')
+      toast.error('删除失败')
     } finally {
       setLoading(false)
     }

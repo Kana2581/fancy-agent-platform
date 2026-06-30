@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import toast from 'react-hot-toast'
 import { Plus, Edit2, Trash2, ArrowLeft, X, Zap } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import type { SkillOut, SkillCreate, SkillUpdate } from '../api'
@@ -93,7 +94,7 @@ const SkillsPage: React.FC = () => {
       setShowModal(false)
     } catch (e) {
       console.error(e)
-      alert('保存失败')
+      toast.error('保存失败')
     } finally {
       setSaving(false)
     }
@@ -106,7 +107,7 @@ const SkillsPage: React.FC = () => {
       setSkills((prev) => prev.filter((s) => s.id !== skill.id))
     } catch (e) {
       console.error(e)
-      alert('删除失败')
+      toast.error('删除失败')
     }
   }
 

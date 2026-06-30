@@ -1,4 +1,5 @@
 import { BrowserRouter, Navigate, Outlet, Route, Routes } from 'react-router-dom'
+import { Toaster } from 'react-hot-toast'
 import { AppProvider } from './context/AppContext'
 import Layout from './components/Layout'
 import ChatPage from './pages/ChatPage'
@@ -43,6 +44,7 @@ const AuthRoutes = () => {
 function App() {
   return (
     <AppProvider>
+      <Toaster position="top-right" toastOptions={{ duration: 4000 }} />
       <BrowserRouter>
         <Routes>
           <Route element={<AuthRoutes />}>

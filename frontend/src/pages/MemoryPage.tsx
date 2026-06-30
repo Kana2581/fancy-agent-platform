@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import toast from 'react-hot-toast'
 import { Trash2, ArrowLeft, Brain, Plus, Pencil, X, Check } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import type { UserMemoryOut } from '../api'
@@ -60,7 +61,7 @@ const MemoryPage: React.FC = () => {
       setMemories((prev) => prev.filter((m) => m.id !== memory.id))
     } catch (e) {
       console.error(e)
-      alert('删除失败')
+      toast.error('删除失败')
     }
   }
 
@@ -83,7 +84,7 @@ const MemoryPage: React.FC = () => {
 
   const handleSave = async () => {
     if (!form.key.trim() || !form.content.trim()) {
-      alert('标识符和内容不能为空')
+      toast.error('标识符和内容不能为空')
       return
     }
     setSaving(true)
@@ -106,7 +107,7 @@ const MemoryPage: React.FC = () => {
       setModalOpen(false)
     } catch (e) {
       console.error(e)
-      alert('保存失败')
+      toast.error('保存失败')
     } finally {
       setSaving(false)
     }

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import toast from 'react-hot-toast'
 import { Plus, Edit2, Trash2, Copy, ArrowLeft, X } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import type { ApiToolCreate, ApiToolOut } from '../api'
@@ -62,7 +63,7 @@ const ApiToolsPage: React.FC = () => {
       setTools((prev) => prev.filter((t) => t.id !== tool.id))
     } catch (e) {
       console.error(e)
-      alert('删除失败')
+      toast.error('删除失败')
     }
   }
 
@@ -74,7 +75,7 @@ const ApiToolsPage: React.FC = () => {
       setTools((prev) => [...prev, created])
     } catch (e) {
       console.error(e)
-      alert('克隆失败')
+      toast.error('克隆失败')
     }
   }
 

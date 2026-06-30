@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react'
+import toast from 'react-hot-toast'
 import { ArrowLeft, Plus, Trash2, X, Webhook, RefreshCcw, Copy, Check, Power } from 'lucide-react'
 import { writeToClipboard } from '../utils/clipboard'
 import { useNavigate } from 'react-router-dom'
@@ -107,7 +108,7 @@ const AgentWebhooksPage: React.FC = () => {
       setDiscordPublicKey('')
     } catch (e) {
       console.error(e)
-      alert('创建失败')
+      toast.error('创建失败')
     } finally {
       setSaving(false)
     }
@@ -119,7 +120,7 @@ const AgentWebhooksPage: React.FC = () => {
       setHooks((prev) => prev.map((h) => (h.id === updated.id ? updated : h)))
     } catch (e) {
       console.error(e)
-      alert('更新失败')
+      toast.error('更新失败')
     }
   }
 
@@ -131,7 +132,7 @@ const AgentWebhooksPage: React.FC = () => {
       setSecretInfo({ webhook: updated, fresh: true })
     } catch (e) {
       console.error(e)
-      alert('重置失败')
+      toast.error('重置失败')
     }
   }
 
@@ -142,7 +143,7 @@ const AgentWebhooksPage: React.FC = () => {
       setHooks((prev) => prev.filter((h) => h.id !== hook.id))
     } catch (e) {
       console.error(e)
-      alert('删除失败')
+      toast.error('删除失败')
     }
   }
 

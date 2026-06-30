@@ -1,4 +1,5 @@
 import axios from 'axios'
+import toast from 'react-hot-toast'
 import { OpenAPI } from '../api/'
 import { tokenManager } from './TokenManager'
 
@@ -8,7 +9,7 @@ export const handleUnauthorized = () => {
   if (_handling401) return
   _handling401 = true
   tokenManager.removeToken()
-  alert('登录已过期，请重新登录')
+  toast.error('登录已过期，请重新登录')
   window.location.replace('/login')
 }
 

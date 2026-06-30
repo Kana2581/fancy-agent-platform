@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react'
+import toast from 'react-hot-toast'
 import {
   Send,
   Bot,
@@ -48,7 +49,7 @@ import { useMessageHandler } from '../hooks/useMessageHandler'
 import { useAppContext } from '../context/AppContext'
 import ThemedSelect from '../components/ThemedSelect'
 import WorkspaceFilesPanel from '../components/WorkspaceFilesPanel'
-import { useHideIntermediatePref } from '../utils/UIPreferences'
+import { useHideIntermediatePref } from '../hooks/useUIPreferences'
 import { writeToClipboard } from '../utils/clipboard'
 
 type UploadStatus = 'uploading' | 'uploaded' | 'error' | 'cancelled'
@@ -129,7 +130,7 @@ const ChatPage: React.FC = () => {
       void navigate(`/chat/${res.id}`)
     } catch (error) {
       console.error('创建会话失败:', error)
-      alert('创建会话失败，请重试。')
+      toast.error('创建会话失败，请重试。')
     }
   }
 
@@ -415,7 +416,7 @@ const ChatPage: React.FC = () => {
       URL.revokeObjectURL(url)
     } catch (err) {
       console.error('导出失败:', err)
-      alert('导出失败，请重试。')
+      toast.error('导出失败，请重试。')
     } finally {
       setIsExporting(false)
     }
@@ -439,7 +440,7 @@ const ChatPage: React.FC = () => {
       setShareUrl(`${window.location.origin}/share/${res.slug}`)
     } catch (err) {
       console.error('创建分享失败:', err)
-      alert('创建分享失败，请重试。')
+      toast.error('创建分享失败，请重试。')
     } finally {
       setSharing(false)
     }
@@ -453,7 +454,7 @@ const ChatPage: React.FC = () => {
       setTimeout(() => setShareCopied(false), 1500)
     } catch (e) {
       console.error('复制分享链接失败:', e)
-      alert('复制失败，请手动复制分享链接。')
+      toast.error('复制失败，请手动复制分享链接。')
     }
   }
 

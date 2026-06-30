@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import toast from 'react-hot-toast'
 import { Plus, Edit2, Trash2, ArrowLeft, X } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import type { ImageToolCreate, ImageToolOut } from '../api'
@@ -64,7 +65,7 @@ const ImageToolsPage: React.FC = () => {
       setTools((prev) => prev.filter((t) => t.id !== tool.id))
     } catch (e) {
       console.error(e)
-      alert('删除失败')
+      toast.error('删除失败')
     }
   }
 

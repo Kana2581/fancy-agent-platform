@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
+import toast from 'react-hot-toast'
 import {
   Plus,
   Trash2,
@@ -907,7 +908,7 @@ const KnowledgeGraphPage: React.FC = () => {
       URL.revokeObjectURL(url)
     } catch (e) {
       console.error(e)
-      alert('导出失败，请重试')
+      toast.error('导出失败，请重试')
     } finally {
       setExporting(false)
     }

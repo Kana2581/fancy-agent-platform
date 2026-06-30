@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react'
+import toast from 'react-hot-toast'
 import { Edit2, Loader2, MessageCirclePlus, Trash2 } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { useAppContext } from '../context/AppContext'
@@ -74,12 +75,12 @@ const LLMSettingsPage: React.FC = () => {
         return true
       } catch (error) {
         console.error('创建会话失败:', error)
-        alert('会话创建失败，请在 Agents 页面开始对话')
+        toast.error('会话创建失败，请在 Agents 页面开始对话')
         return false
       }
     } catch (error) {
       console.error('创建 Agent 失败:', error)
-      alert('Agent 创建失败，请稍后在 Agents 页面手动创建')
+      toast.error('Agent 创建失败，请稍后在 Agents 页面手动创建')
       return false
     } finally {
       if (trackModelButton) {
@@ -106,7 +107,7 @@ const LLMSettingsPage: React.FC = () => {
       }
     } catch (error) {
       console.error('保存模型失败:', error)
-      alert('保存模型失败')
+      toast.error('保存模型失败')
     } finally {
       setSavingAction(null)
     }

@@ -1,7 +1,7 @@
 import React from 'react'
 import { ArrowLeft, Eye, EyeOff } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
-import { useHideIntermediatePref } from '../utils/UIPreferences'
+import { useHideIntermediatePref } from '../hooks/useUIPreferences'
 
 const PreferencesPage: React.FC = () => {
   const navigate = useNavigate()

@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import toast from 'react-hot-toast'
 import { ChevronRight, ChevronLeft, Loader2, Image } from 'lucide-react'
 import ThemedSelect from './ThemedSelect'
 import type { ImageToolCreate, ImageToolOut } from '../api'
@@ -67,7 +68,7 @@ const ImageToolWizard: React.FC<Props> = ({ initialTool, onSave, onCancel }) => 
       }
       setStep(2)
     } catch (e: unknown) {
-      alert('保存失败: ' + String(e))
+      toast.error('保存失败: ' + String(e))
     } finally {
       setSaving(false)
     }

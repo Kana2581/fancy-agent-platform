@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import toast from 'react-hot-toast'
 import {
   ChevronDown,
   ChevronRight,
@@ -516,7 +517,7 @@ const MessageActions: React.FC<{
       window.setTimeout(() => setCopied(false), 1200)
     } catch (err) {
       console.error('复制失败', err)
-      alert('复制失败，请手动复制。')
+      toast.error('复制失败，请手动复制。')
     }
   }
   return (

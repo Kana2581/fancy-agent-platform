@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import toast from 'react-hot-toast'
 import { Plus, Edit2, Trash2, Copy, ArrowLeft, X, FileText } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import type { PromptTemplateOut, PromptTemplateCreate, PromptTemplateUpdate } from '../api'
@@ -86,7 +87,7 @@ const PromptTemplatesPage: React.FC = () => {
       setShowModal(false)
     } catch (e) {
       console.error(e)
-      alert('保存失败')
+      toast.error('保存失败')
     } finally {
       setSaving(false)
     }
@@ -99,7 +100,7 @@ const PromptTemplatesPage: React.FC = () => {
       setTemplates((prev) => prev.filter((t) => t.id !== template.id))
     } catch (e) {
       console.error(e)
-      alert('删除失败')
+      toast.error('删除失败')
     }
   }
 
@@ -109,7 +110,7 @@ const PromptTemplatesPage: React.FC = () => {
       setCopiedId(template.id)
       setTimeout(() => setCopiedId(null), 1500)
     } catch {
-      alert('复制失败，请手动复制')
+      toast.error('复制失败，请手动复制')
     }
   }
 

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import toast from 'react-hot-toast'
 import { Plus, Edit2, Trash2, ArrowLeft } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { useAppContext } from '../context/AppContext'
@@ -94,7 +95,7 @@ const AgentsPage: React.FC = () => {
         setAvailableMcps(fullAgent.mcps || [])
       } catch (error) {
         console.error('加载 Agent 详情失败:', error)
-        alert('加载 Agent 详情失败')
+        toast.error('加载 Agent 详情失败')
         return
       }
     } else {
@@ -136,7 +137,7 @@ const AgentsPage: React.FC = () => {
       })
       .catch((error) => {
         console.error('创建会话失败:', error)
-        alert('创建会话失败，请重试。')
+        toast.error('创建会话失败，请重试。')
       })
   }
 
@@ -169,7 +170,7 @@ const AgentsPage: React.FC = () => {
       await loadAgents()
     } catch (e) {
       console.error(e)
-      alert('保存失败')
+      toast.error('保存失败')
     }
   }
 
@@ -181,7 +182,7 @@ const AgentsPage: React.FC = () => {
       setAgents((prev) => prev.filter((a) => a.id !== id))
     } catch (e) {
       console.error(e)
-      alert('删除失败')
+      toast.error('删除失败')
     }
   }
 
