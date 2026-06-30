@@ -137,6 +137,12 @@ class LocalFileUploader(BaseFileUploader):
 
         return f"{date_dir}/{safe_name}"
 
+    async def save_raw_bytes(self, data: bytes, key: str) -> None:
+        path = self.upload_dir / key
+        path.parent.mkdir(parents=True, exist_ok=True)
+        async with aiofiles.open(path, "wb") as f:
+            await f.write(data)
+
     async def get_url(self, key: str) -> str:
         return f"{self.base_url}/{key}"
 

@@ -49,24 +49,17 @@ def _normalize_object_key(object_key: str) -> str:
 
 
 def strip_oss_prefix(url: str) -> Optional[str]:
-    """If `url` points back at our own OSS_URL, return the relative object_key.
+    """If `url` points back at our own storage, return the relative object_key.
 
     Returns None when the URL is external — caller should fall back to HTTP.
+    Delegates to `extract_object_key`, which also tolerates presigned URLs
+    (signature query string dropped) and scheme/host drift.
     """
     if not url:
         return None
-    oss = (settings.OSS_URL or "").rstrip("/")
-    if oss and url.startswith(oss + "/"):
-        return url[len(oss) + 1 :]
+    from app.services.storage.url_signer import extract_object_key
 
-    # Also tolerate scheme/host mismatches: if the path component matches an
-    # existing file under UPLOAD_DIR, treat it as internal.
-    parsed = urlparse(url)
-    if parsed.scheme in ("http", "https") and parsed.path:
-        candidate = parsed.path.lstrip("/")
-        if candidate and (_upload_root() / candidate).is_file():
-            return candidate
-    return None
+    return extract_object_key(url)
 
 
 def read_local_image(object_key: str) -> Tuple[bytes, str]:
@@ -101,7 +94,15 @@ async def load_image_bytes(
     3. data: URI or external http(s) URL → download_image_bytes
     """
     if object_key:
-        return await asyncio.to_thread(read_local_image, object_key)
+        try:
+            return await asyncio.to_thread(read_local_image, object_key)
+        except FileNotFoundError:
+            # S3 模式：文件在云端 —— public 模式走公网 URL，presigned 模式走签名 URL
+            from app.services.storage.url_signer import build_storage_url
+
+            url = build_storage_url(object_key)
+            data = await download_image_bytes(url)
+            return data, mime_from_ext(Path(object_key).suffix)
 
     if image_url:
         url = image_url.strip()
@@ -118,7 +119,13 @@ async def load_image_bytes(
 
         internal_key = strip_oss_prefix(url)
         if internal_key:
-            return await asyncio.to_thread(read_local_image, internal_key)
+            try:
+                return await asyncio.to_thread(read_local_image, internal_key)
+            except FileNotFoundError:
+                # S3 模式兜底：按 object_key 重新签名，避免历史里的过期预签名 URL 403
+                from app.services.storage.url_signer import build_storage_url
+
+                url = build_storage_url(internal_key)
 
         data = await download_image_bytes(url)
         return data, mime_from_ext(urlparse(url).path)

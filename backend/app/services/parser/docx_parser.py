@@ -1,24 +1,23 @@
 import asyncio
-from pathlib import Path
+import io
 
 from app.services.parser.base import BaseFileParser
 
 
 class DocxParser(BaseFileParser):
 
-    async def parse(self, file_path: Path) -> str:
-        return await asyncio.to_thread(self._extract_text, file_path)
+    async def parse(self, data: bytes) -> str:
+        return await asyncio.to_thread(self._extract_text, data)
 
     @staticmethod
-    def _extract_text(file_path: Path) -> str:
+    def _extract_text(data: bytes) -> str:
         from docx import Document
 
-        doc = Document(str(file_path))
+        doc = Document(io.BytesIO(data))
         parts = []
         for para in doc.paragraphs:
             if para.text.strip():
                 parts.append(para.text)
-        # 提取表格内容
         for table in doc.tables:
             for row in table.rows:
                 row_text = "\t".join(cell.text.strip() for cell in row.cells)

@@ -30,6 +30,23 @@ class Settings:
             "OSS_URL",
             "http://localhost:8000"
         )
+        # Storage backend: "local" (default) or "s3" (any S3-compatible: OSS / AWS / MinIO)
+        self.STORAGE_BACKEND: str = os.getenv("STORAGE_BACKEND", "local")
+        self.S3_ENDPOINT_URL: str = os.getenv("S3_ENDPOINT_URL", "")
+        self.S3_ACCESS_KEY_ID: str = os.getenv("S3_ACCESS_KEY_ID", "")
+        self.S3_SECRET_ACCESS_KEY: str = os.getenv("S3_SECRET_ACCESS_KEY", "")
+        self.S3_BUCKET: str = os.getenv("S3_BUCKET", "")
+        self.S3_REGION: str = os.getenv("S3_REGION", "us-east-1")
+        # S3 URL 模式：
+        #   "public"    — bucket 公有读，返回明文 OSS_URL/object_key（默认，向后兼容）
+        #   "presigned" — bucket 私有，后端按需生成带签名+过期时间的临时 URL
+        self.S3_URL_MODE: str = os.getenv("S3_URL_MODE", "public").lower().strip()
+        # 预签名 URL 有效期（秒），仅 presigned 模式生效，默认 1 小时
+        # 容忍空值/非法值（如 .env 里 `S3_PRESIGN_EXPIRE=` 留空），回落到默认而非启动崩溃
+        try:
+            self.S3_PRESIGN_EXPIRE: int = int(os.getenv("S3_PRESIGN_EXPIRE") or "3600")
+        except ValueError:
+            self.S3_PRESIGN_EXPIRE = 3600
         self.ALGORITHM = "HS256"
         self.SECRET_KEY = os.getenv("SECRET_KEY","super-secret-key")
         # 敏感字段（API Key）落库加密密钥，可选；留空则复用 SECRET_KEY 派生

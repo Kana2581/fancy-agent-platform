@@ -1,8 +1,21 @@
+import pytest
 import pytest_asyncio
 from sqlalchemy import event
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
+from app.core.config import settings
 from app.core.database import Base
+
+
+@pytest.fixture(autouse=True)
+def _force_local_storage(monkeypatch):
+    """Pin storage to the local backend for every test.
+
+    The developer's `.env` may set STORAGE_BACKEND=s3; without this, tests that go
+    through the storage factory would route writes to a real bucket (and break
+    local-disk assertions). Storage-specific tests monkeypatch this back to 's3'.
+    """
+    monkeypatch.setattr(settings, "STORAGE_BACKEND", "local", raising=False)
 
 # Register all models with Base.metadata so every table exists when create_all runs.
 # This matters when running a single test file in isolation.
