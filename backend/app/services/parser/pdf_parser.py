@@ -1,19 +1,19 @@
 import asyncio
-from pathlib import Path
+import io
 
 from app.services.parser.base import BaseFileParser
 
 
 class PDFParser(BaseFileParser):
 
-    async def parse(self, file_path: Path) -> str:
-        return await asyncio.to_thread(self._extract_text, file_path)
+    async def parse(self, data: bytes) -> str:
+        return await asyncio.to_thread(self._extract_text, data)
 
     @staticmethod
-    def _extract_text(file_path: Path) -> str:
+    def _extract_text(data: bytes) -> str:
         from pypdf import PdfReader
 
-        reader = PdfReader(str(file_path))
+        reader = PdfReader(io.BytesIO(data))
         parts = []
         for page in reader.pages:
             text = page.extract_text()

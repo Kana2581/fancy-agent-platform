@@ -44,7 +44,9 @@ def _build_image_block(object_key: str, file_ext: str) -> ImageContentBlock:
             object_key,
             exc,
         )
-        url = f"{settings.OSS_URL.rstrip('/')}/{object_key.lstrip('/')}"
+        from app.services.storage.url_signer import build_storage_url
+
+        url = build_storage_url(object_key)
         return ImageContentBlock(
             type="image",
             url=url,

@@ -227,8 +227,16 @@ The backend reads `backend/.env` — **all backend commands must be run from the
 |---|---|---|
 | `DATABASE_URL` | ✅ | SQLite: `sqlite+aiosqlite:///./fancy_agent.db`; MySQL: `mysql+asyncmy://user:pass@host/db` |
 | `SECRET_KEY` | — | JWT signing key — has a default (`super-secret-key`), so it boots without being set; set a random string in production. Changing it invalidates all active sessions |
-| `OSS_URL` | ✅ | Base URL for uploaded files; use `http://localhost:8000` for local development |
-| `UPLOAD_DIR` | ✅ | File upload storage directory, e.g. `./data/uploads` |
+| `OSS_URL` | ✅ | Base URL for file access. For local dev: `http://localhost:8000`. For S3 `public` mode: the bucket's public domain, e.g. `https://your-bucket.oss-cn-hangzhou.aliyuncs.com`. For `presigned` mode: same bucket domain (URLs are signed automatically by the backend) |
+| `STORAGE_BACKEND` | — | Storage backend: `local` (default, files stored on disk) or `s3` (Alibaba Cloud OSS / AWS S3 / MinIO) |
+| `S3_ENDPOINT_URL` | — | S3-compatible endpoint, e.g. `https://oss-cn-hangzhou.aliyuncs.com`; leave empty for native AWS S3 |
+| `S3_ACCESS_KEY_ID` | — | S3 access key ID (required when `STORAGE_BACKEND=s3`) |
+| `S3_SECRET_ACCESS_KEY` | — | S3 secret access key (required when `STORAGE_BACKEND=s3`) |
+| `S3_BUCKET` | — | Bucket name (required when `STORAGE_BACKEND=s3`) |
+| `S3_REGION` | — | Region, e.g. `cn-hangzhou`; defaults to `us-east-1` |
+| `S3_URL_MODE` | — | URL mode: `public` (bucket is publicly readable, returns permanent plain URLs, default) or `presigned` (private bucket, backend generates signed temporary URLs) |
+| `S3_PRESIGN_EXPIRE` | — | Presigned URL TTL in seconds; only applies in `presigned` mode; default `3600` |
+| `UPLOAD_DIR` | ✅ | File upload storage directory, e.g. `./data/uploads` (applies when `STORAGE_BACKEND=local`) |
 | `WORKSPACE_DIR` | ✅ | Agent workspace directory, e.g. `./data/workspaces` |
 | `SEARCH_PROVIDER` | — | `duckduckgo` (default) or `tavily` |
 | `TAVILY_API_KEY` | — | Required when `SEARCH_PROVIDER=tavily` |

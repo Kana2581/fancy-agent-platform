@@ -2,7 +2,7 @@ from typing import Optional, List
 from datetime import datetime
 from pydantic import BaseModel, computed_field
 
-from app.core.config import settings
+from app.services.storage.url_signer import build_storage_url
 
 
 class GeneratedImageOut(BaseModel):
@@ -24,14 +24,12 @@ class GeneratedImageOut(BaseModel):
     @computed_field
     @property
     def image_url(self) -> str:
-        oss_url = getattr(settings, "OSS_URL", "http://localhost:8000")
-        return f"{oss_url.rstrip('/')}/{self.object_key}"
+        return build_storage_url(self.object_key)
 
     @computed_field
     @property
     def thumbnail_url(self) -> str:
-        oss_url = getattr(settings, "OSS_URL", "http://localhost:8000")
-        return f"{oss_url.rstrip('/')}/{self.object_key}.thumb.webp"
+        return build_storage_url(f"{self.object_key}.thumb.webp")
 
 
 class GeneratedImagePageOut(BaseModel):

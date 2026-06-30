@@ -32,6 +32,7 @@ dependencies = [
     "ddgs>=9.11.4",
     "matplotlib>=3.9.0",
     "langchain-google-genai>=4.2.1",
+    "aioboto3>=13.0.0",
 ]
 
 [project.optional-dependencies]

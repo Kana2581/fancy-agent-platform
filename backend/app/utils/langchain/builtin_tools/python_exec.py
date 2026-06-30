@@ -12,8 +12,6 @@
 import asyncio
 import json
 import shutil
-import uuid
-from datetime import date
 from pathlib import Path
 from typing import List, Optional, Type
 
@@ -96,18 +94,15 @@ class PythonExecTool(BaseTool):
 
     # ---------- 产物登记 ----------
 
-    def _publish_image_to_generated(self, src: Path) -> Optional[str]:
-        """把图片产物复制到 UPLOAD_DIR/generated/<date>/，返回公开 URL（供聊天内联）。"""
+    async def _publish_image_to_generated(self, src: Path) -> Optional[str]:
+        """把图片产物发布到 generated/<date>/（存储后端由工厂决定），返回访问 URL（供聊天内联）。"""
         try:
-            upload_dir = getattr(settings, "UPLOAD_DIR", "/data/uploads")
-            oss_url = settings.OSS_URL.rstrip("/")
-            date_str = date.today().strftime("%Y/%m/%d")
-            save_dir = Path(upload_dir) / "generated" / date_str
-            save_dir.mkdir(parents=True, exist_ok=True)
+            from app.utils.image.base_adapter import build_image_url, save_generated_image
+
+            data = await asyncio.to_thread(src.read_bytes)
             ext = src.suffix.lstrip(".") or "png"
-            filename = f"{uuid.uuid4().hex}.{ext}"
-            shutil.copy2(src, save_dir / filename)
-            return f"{oss_url}/generated/{date_str}/{filename}"
+            object_key = await save_generated_image(data, ext)
+            return build_image_url(object_key)
         except Exception:
             logger.exception("python_exec publish image to generated failed")
             return None
@@ -131,7 +126,7 @@ class PythonExecTool(BaseTool):
             if file_id is not None:
                 entry["file_id"] = file_id
             if target.suffix.lower().lstrip(".") in _IMAGE_EXTS:
-                url = self._publish_image_to_generated(target)
+                url = await self._publish_image_to_generated(target)
                 if url:
                     entry["url"] = url
             files.append(entry)

@@ -22,7 +22,7 @@ from app.services.agent_service import AgentService
 from app.services.chat_file_service import ChatFileService
 from app.services.chat_service import ChatService
 from app.services.session_service import SessionService
-from app.services.storage.local import LocalFileUploader
+from app.services.storage import get_file_uploader
 from app.utils.langchain.agent_util import get_langchian_agent
 
 logger = get_logger(__name__)
@@ -189,10 +189,7 @@ class EmailPollingService:
         message_id: str,
     ) -> None:
         """把邮件图片落盘、建 ChatFile 行并关联到指定消息。"""
-        uploader = LocalFileUploader(
-            upload_dir=settings.UPLOAD_DIR,
-            base_url=settings.OSS_URL,
-        )
+        uploader = get_file_uploader()
         file_mapper = ChatFileMapper(db)
         file_ids: List[int] = []
 

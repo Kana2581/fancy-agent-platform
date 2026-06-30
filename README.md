@@ -234,8 +234,16 @@ bash deploy.sh
 |---|---|---|
 | `DATABASE_URL` | ✅ | SQLite：`sqlite+aiosqlite:///./fancy_agent.db`；MySQL：`mysql+asyncmy://user:pass@host/db` |
 | `SECRET_KEY` | — | JWT 签名密钥，有默认值（`super-secret-key`），不设置也能启动；生产环境务必改为随机字符串，修改后所有已登录会话失效 |
-| `OSS_URL` | ✅ | 上传文件的访问基础 URL，本地开发填 `http://localhost:8000` |
-| `UPLOAD_DIR` | ✅ | 文件上传存储目录，如 `./data/uploads` |
+| `OSS_URL` | ✅ | 文件访问基础 URL。本地开发填 `http://localhost:8000`；S3 public 模式填 bucket 公开域名，如 `https://your-bucket.oss-cn-hangzhou.aliyuncs.com`；presigned 模式同上（URL 会被后端自动签名） |
+| `STORAGE_BACKEND` | — | 存储后端：`local`（默认，文件存本机）或 `s3`（阿里云 OSS / AWS S3 / MinIO） |
+| `S3_ENDPOINT_URL` | — | S3 兼容端点，如 `https://oss-cn-hangzhou.aliyuncs.com`；AWS S3 原生接口留空 |
+| `S3_ACCESS_KEY_ID` | — | S3 访问密钥 ID（`STORAGE_BACKEND=s3` 时必填） |
+| `S3_SECRET_ACCESS_KEY` | — | S3 访问密钥 Secret（`STORAGE_BACKEND=s3` 时必填） |
+| `S3_BUCKET` | — | bucket 名称（`STORAGE_BACKEND=s3` 时必填） |
+| `S3_REGION` | — | 区域，如 `cn-hangzhou`，默认 `us-east-1` |
+| `S3_URL_MODE` | — | URL 模式：`public`（bucket 公有读，返回永久明文链接，默认）或 `presigned`（bucket 私有，后端签名临时 URL） |
+| `S3_PRESIGN_EXPIRE` | — | 预签名 URL 有效期（秒），仅 `presigned` 模式生效，默认 `3600` |
+| `UPLOAD_DIR` | ✅ | 文件上传存储目录，如 `./data/uploads`（`STORAGE_BACKEND=local` 时有效） |
 | `WORKSPACE_DIR` | ✅ | Agent 工作区目录，如 `./data/workspaces` |
 | `SEARCH_PROVIDER` | — | `duckduckgo`（默认）或 `tavily` |
 | `TAVILY_API_KEY` | — | `SEARCH_PROVIDER=tavily` 时必填 |

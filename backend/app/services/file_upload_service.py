@@ -2,12 +2,11 @@ from pathlib import Path
 from fastapi import UploadFile, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.config import settings
 from app.mappers.chat_file_mapper import ChatFileMapper
 from app.models.chat_file import ChatFile
 from app.models.chat_file_content import ChatFileContent
 from app.schemas.chat_file_schema import ChatFileUploadRequest, ChatFileResponse
-from app.services.storage.local import LocalFileUploader
+from app.services.storage import get_file_uploader
 from app.services.parser.factory import FileParserFactory
 
 
@@ -16,10 +15,7 @@ class FileUploadService:
     def __init__(self, db: AsyncSession):
         self.db = db
         self.mapper = ChatFileMapper(db)
-        self.uploader = LocalFileUploader(
-            upload_dir=settings.UPLOAD_DIR,
-            base_url=settings.OSS_URL,
-        )
+        self.uploader = get_file_uploader()
 
     async def upload(
         self,
@@ -30,13 +26,16 @@ class FileUploadService:
 
         # ① 校验
         await self.uploader.validate(file)
+        await file.seek(0)
 
-        # ② 保存
-        object_key = await self.uploader.save(file)
-        file_path = Path(self.uploader.upload_dir) / object_key
-
+        # ② 读取原始字节（大小计算 + 解析，与存储后端无关）
+        raw = await file.read()
+        file_size = len(raw)
         file_ext = Path(file.filename).suffix.lower()
-        file_size = file_path.stat().st_size
+        await file.seek(0)
+
+        # ③ 保存到存储后端
+        object_key = await self.uploader.save(file)
 
         chat_file = await self.mapper.create_from_dict({
             "file_name": file.filename,
@@ -53,12 +52,12 @@ class FileUploadService:
 
         await self.db.commit()
 
-        # ③ 使用工厂解析
+        # ④ 使用工厂解析
         parser = FileParserFactory.get_parser(file_ext)
 
         if parser:
             try:
-                content = await parser.parse(file_path)
+                content = await parser.parse(raw)
 
                 self.db.add(ChatFileContent(
                     file_id=chat_file.id,

@@ -1,11 +1,11 @@
 import asyncio
+import io
 import logging
 import uuid
 from abc import ABC, abstractmethod
 from datetime import date
 from pathlib import Path
 
-import aiofiles
 from PIL import Image
 
 from app.core.config import settings
@@ -56,7 +56,7 @@ def parse_size_dims(size: str | None, sep_priority: tuple[str, ...] = ("x", "*")
 
 
 def generate_thumbnail(src_path: Path, dst_path: Path) -> None:
-    """同步生成 WebP 缩略图，供 save 流程和一次性回填脚本共用。"""
+    """同步生成 WebP 缩略图（供磁盘路径场景和回填脚本使用）。"""
     with Image.open(src_path) as im:
         if im.mode not in ("RGB", "RGBA"):
             im = im.convert("RGBA" if "A" in im.mode else "RGB")
@@ -64,57 +64,77 @@ def generate_thumbnail(src_path: Path, dst_path: Path) -> None:
         im.save(dst_path, format="WEBP", quality=THUMBNAIL_QUALITY, method=4)
 
 
+def _generate_thumbnail_bytes(data: bytes) -> bytes:
+    """从内存 bytes 生成 WebP 缩略图，不触碰磁盘。"""
+    buf = io.BytesIO()
+    with Image.open(io.BytesIO(data)) as im:
+        if im.mode not in ("RGB", "RGBA"):
+            im = im.convert("RGBA" if "A" in im.mode else "RGB")
+        im.thumbnail((THUMBNAIL_MAX_EDGE, THUMBNAIL_MAX_EDGE))
+        im.save(buf, format="WEBP", quality=THUMBNAIL_QUALITY, method=4)
+    return buf.getvalue()
+
+
 async def save_generated_image(data: bytes, ext: str = "png") -> str:
     """
-    保存到 upload_dir/generated/YYYY/MM/DD/{uuid}.{ext}
-    返回 object_key（相对路径），如 generated/2025/01/01/uuid.png
-    同时生成 {file}.thumb.webp 供画廊缩略图使用，失败不影响主流程。
+    保存到 generated/YYYY/MM/DD/{uuid}.{ext}，同时保存缩略图。
+    返回 object_key，如 generated/2025/01/01/uuid.png。
+    本地模式写磁盘；S3 模式写对象存储，均通过存储工厂路由。
     """
-    upload_dir = getattr(settings, "UPLOAD_DIR", "/data/uploads")
+    from app.services.storage import get_file_uploader
 
     date_str = date.today().strftime("%Y/%m/%d")
-    save_dir = Path(upload_dir) / "generated" / date_str
-    save_dir.mkdir(parents=True, exist_ok=True)
-
     filename = f"{uuid.uuid4().hex}.{ext}"
-    file_path = save_dir / filename
+    object_key = f"generated/{date_str}/{filename}"
 
-    async with aiofiles.open(file_path, "wb") as f:
-        await f.write(data)
+    uploader = get_file_uploader()
+    await uploader.save_raw_bytes(data, object_key)
 
-    thumb_path = file_path.with_name(file_path.name + THUMBNAIL_SUFFIX)
     try:
-        await asyncio.to_thread(generate_thumbnail, file_path, thumb_path)
+        thumb_bytes = await asyncio.to_thread(_generate_thumbnail_bytes, data)
+        await uploader.save_raw_bytes(thumb_bytes, f"{object_key}{THUMBNAIL_SUFFIX}")
     except Exception as exc:
-        logger.warning("thumbnail generation failed for %s: %s", file_path, exc)
+        logger.warning("thumbnail generation failed for %s: %s", object_key, exc)
 
-    return f"generated/{date_str}/{filename}"
+    return object_key
 
 
 def build_image_url(object_key: str) -> str:
-    """将 object_key 拼接 OSS_URL 得到完整访问地址"""
-    oss_url = getattr(settings, "OSS_URL", "http://localhost:8000")
-    return f"{oss_url.rstrip('/')}/{object_key}"
+    """由 object_key 生成完整访问地址（public 模式明文拼接，presigned 模式签名 URL）"""
+    from app.services.storage.url_signer import build_storage_url
+
+    return build_storage_url(object_key)
 
 
 def read_image_size(object_key: str) -> tuple[int | None, int | None]:
     """从已保存的文件读真实宽高，失败返回 (None, None)。
 
-    用于把渲染结果的真实分辨率写入 generated_images 表，避免
-    传入的 width/height 缺省值与实际不符。
+    本地模式直接读磁盘；S3 模式本地文件不存在时回退到 HTTP GET 公网 URL。
+    调用方已用 asyncio.to_thread，此处同步 I/O 是正确的。
     """
     upload_dir = getattr(settings, "UPLOAD_DIR", "/data/uploads")
     path = Path(upload_dir) / object_key
+    if path.is_file():
+        try:
+            with Image.open(path) as im:
+                return int(im.size[0]), int(im.size[1])
+        except Exception as exc:
+            logger.warning("read_image_size local failed for %s: %s", object_key, exc)
+
+    # S3 模式兜底：从公网 URL 下载（bucket 须为 public-read）
     try:
-        with Image.open(path) as im:
-            w, h = im.size
-            return int(w), int(h)
+        import httpx
+        resp = httpx.get(build_image_url(object_key), timeout=30)
+        resp.raise_for_status()
+        with Image.open(io.BytesIO(resp.content)) as im:
+            return int(im.size[0]), int(im.size[1])
     except Exception as exc:
-        logger.warning("read_image_size failed for %s: %s", object_key, exc)
+        logger.warning("read_image_size remote failed for %s: %s", object_key, exc)
         return None, None
 
 
 def build_thumbnail_url(object_key: str) -> str:
     """返回缩略图的访问地址（约定 {object_key}.thumb.webp）"""
-    oss_url = getattr(settings, "OSS_URL", "http://localhost:8000")
-    return f"{oss_url.rstrip('/')}/{object_key}{THUMBNAIL_SUFFIX}"
+    from app.services.storage.url_signer import build_storage_url
+
+    return build_storage_url(f"{object_key}{THUMBNAIL_SUFFIX}")

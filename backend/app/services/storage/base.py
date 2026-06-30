@@ -39,6 +39,10 @@ class BaseFileUploader(ABC):
     async def get_url(self, key: str) -> str:
         return key
 
+    async def save_raw_bytes(self, data: bytes, key: str) -> None:
+        """Write bytes at a pre-computed object key (used by image generation pipeline)."""
+        raise NotImplementedError
+
     async def delete(self, key: str) -> None:
         raise NotImplementedError
 
