@@ -1,10 +1,13 @@
 import pytest
 import pytest_asyncio
+from httpx import ASGITransport, AsyncClient
 from sqlalchemy import event
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from app.core.config import settings
 from app.core.database import Base
+from app.deps.db import get_db
+from app.main import app
 
 
 @pytest.fixture(autouse=True)
@@ -62,3 +65,60 @@ async def async_session(async_engine):
     async with factory() as session:
         yield session
         await session.rollback()
+
+
+@pytest_asyncio.fixture
+async def test_app(async_engine):
+    factory = async_sessionmaker(async_engine, expire_on_commit=False, class_=AsyncSession)
+
+    async def _override_get_db():
+        async with factory() as session:
+            try:
+                yield session
+            except Exception:
+                await session.rollback()
+                raise
+
+    app.dependency_overrides[get_db] = _override_get_db
+    yield app
+    del app.dependency_overrides[get_db]
+
+
+@pytest_asyncio.fixture
+async def api_client(test_app):
+    transport = ASGITransport(app=test_app)
+    async with AsyncClient(transport=transport, base_url="http://testserver") as client:
+        yield client
+
+
+@pytest_asyncio.fixture
+async def create_user_and_login(api_client):
+    counter = 0
+
+    async def _create_user_and_login(
+        *,
+        username: str | None = None,
+        email: str | None = None,
+        password: str = "secret123",
+    ) -> tuple[dict, dict[str, str]]:
+        nonlocal counter
+        counter += 1
+        username = username or f"user{counter}"
+        email = email or f"user{counter}@example.com"
+
+        register_response = await api_client.post(
+            "/api/v1/auth/register",
+            json={"email": email, "username": username, "password": password},
+        )
+        assert register_response.status_code == 200, register_response.text
+
+        login_response = await api_client.post(
+            "/api/v1/auth/login",
+            json={"username": username, "password": password},
+        )
+        assert login_response.status_code == 200, login_response.text
+        token = login_response.json()["access_token"]
+        return register_response.json(), {"Authorization": f"Bearer {token}"}
+
+    return _create_user_and_login
+
