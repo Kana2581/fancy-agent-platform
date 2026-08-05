@@ -1,6 +1,7 @@
 BUILTIN_TOOL_WEB_SEARCH = "web_search"
 BUILTIN_TOOL_WEB_FETCH = "web_fetch"
 BUILTIN_TOOL_PYTHON_EXEC = "python_exec"
+BUILTIN_TOOL_BASH_EXEC = "bash_exec"
 BUILTIN_TOOL_SCHEDULED_TASK_MANAGER = "scheduled_task_manager"
 BUILTIN_TOOL_SKILL_MANAGER = "skill_manager"
 BUILTIN_TOOL_MEMORY_MANAGER = "memory_manager"
@@ -24,6 +25,11 @@ BUILTIN_TOOL_CATALOG = [
         "tool_type": "python_exec",
         "name": "Python 执行",
         "description": "执行 Python 代码，支持 matplotlib 图表生成，输出文件以 URL 返回",
+    },
+    {
+        "tool_type": "bash_exec",
+        "name": "Bash 执行",
+        "description": "在隔离会话工作区内执行 Bash 命令（无网络访问）",
     },
     {
         "tool_type": "scheduled_task_manager",

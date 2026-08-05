@@ -1,7 +1,7 @@
 """Session 工作区文件操作工具集。
 
 每个 session 在 /data/workspaces/{user_id}/{session_id}/ 下有独立的可写工作区。
-agent 通过这些工具读写文件、向用户呈现下载。所有路径走 safe_resolve 校验，
+agent 通过这些工具读写文件、向用户呈现下载。所有路径经 sandbox 校验，
 写操作前走 check_quota，禁止越界、禁止超配额、禁止暴露危险扩展名下载。
 """
 import json
@@ -16,16 +16,13 @@ from app.deps.db import get_db_session
 from app.mappers.chat_file_mapper import ChatFileMapper
 from app.mappers.chat_file_content_mapper import ChatFileContentMapper
 from app.utils.workspace_path import (
-    DANGEROUS_DOWNLOAD_EXTS,
     PathTraversalError,
     QuotaExceededError,
     check_quota,
-    ensure_workspace,
-    get_workspace_root,
     is_safe_download_ext,
     relative_to_root,
-    safe_resolve,
 )
+from app.utils.sandbox_client import SandboxUnavailableError, sandbox_client
 
 
 class WsListInput(BaseModel):
@@ -71,6 +68,15 @@ def _ok(data: dict) -> str:
     return json.dumps(data, ensure_ascii=False)
 
 
+def _validate_workspace_path(path: str) -> str:
+    """Validate agent input without touching the shared workspace volume."""
+    cleaned = (path or "").strip()
+    candidate = Path(cleaned)
+    if not cleaned or candidate.is_absolute() or (len(cleaned) >= 2 and cleaned[1] == ":") or ".." in candidate.parts:
+        raise PathTraversalError(f"路径越界或非法: {path}")
+    return candidate.as_posix()
+
+
 def _build_object_key(user_id: int, session_id: str, target: Path) -> str:
     """把工作区内绝对路径反推成 ChatFile.object_key（统一用 / 分隔）。"""
     ws_root = Path(settings.WORKSPACE_DIR)
@@ -83,7 +89,8 @@ def _build_object_key(user_id: int, session_id: str, target: Path) -> str:
 async def _register_workspace_file(
     user_id: int,
     session_id: str,
-    target: Path,
+    target: Path | str,
+    size: Optional[int] = None,
 ) -> Optional[int]:
     """ws_write / ws_edit 后调用：把文件登记/刷新为 ChatFile 行。
 
@@ -91,14 +98,20 @@ async def _register_workspace_file(
     - 已存在则只在 size 变化时刷新
     - 返回 chat_file.id；跳过/异常时返回 None
     """
-    if not target.exists() or not target.is_file():
-        return None
-    if not is_safe_download_ext(target.name):
+    if isinstance(target, Path):
+        if not target.exists() or not target.is_file():
+            return None
+        relative_path = relative_to_root(user_id, session_id, target)
+        filename = target.name
+        size = target.stat().st_size if size is None else size
+    else:
+        relative_path = target.replace("\\", "/").lstrip("/")
+        filename = Path(relative_path).name
+    if size is None or not is_safe_download_ext(filename):
         return None
     try:
-        size = target.stat().st_size
-        ext = target.suffix.lower().lstrip(".")
-        object_key = _build_object_key(user_id, session_id, target)
+        ext = Path(filename).suffix.lower().lstrip(".")
+        object_key = f"{user_id}/{session_id}/{relative_path}"
         async with get_db_session() as db:
             mapper = ChatFileMapper(db)
             existing = await mapper.get_workspace_file(
@@ -112,7 +125,7 @@ async def _register_workspace_file(
                 await db.commit()
                 return existing.id
             chat_file = await mapper.create_from_dict({
-                "file_name": target.name,
+                "file_name": filename,
                 "file_ext": ext,
                 "file_size": size,
                 "content_type": None,
@@ -133,11 +146,15 @@ async def _register_workspace_file(
 async def _unregister_workspace_file(
     user_id: int,
     session_id: str,
-    target: Path,
+    target: Path | str,
 ) -> None:
     """ws_delete 后调用：清理对应的 ChatFile 行，避免面板留下 404 幽灵条目。"""
     try:
-        object_key = _build_object_key(user_id, session_id, target)
+        if isinstance(target, Path):
+            object_key = _build_object_key(user_id, session_id, target)
+        else:
+            relative_path = target.replace("\\", "/").lstrip("/")
+            object_key = f"{user_id}/{session_id}/{relative_path}"
         async with get_db_session() as db:
             mapper = ChatFileMapper(db)
             existing = await mapper.get_workspace_file(
@@ -153,6 +170,14 @@ async def _unregister_workspace_file(
 
 
 def build_workspace_tools(user_id: int, session_id: str) -> List[BaseTool]:
+    rel_dir = f"{user_id}/{session_id}"
+    client = sandbox_client()
+
+    async def workspace_request(operation: str, **payload) -> dict:
+        try:
+            return await client.workspace(operation, rel_dir, **payload)
+        except SandboxUnavailableError as exc:
+            return {"error": str(exc)}
 
     class WsListTool(BaseTool):
         name: str = "ws_list"
@@ -164,29 +189,7 @@ def build_workspace_tools(user_id: int, session_id: str) -> List[BaseTool]:
 
         async def _arun(self, path: str = "") -> str:
             try:
-                target = ensure_workspace(user_id, session_id)
-                if path:
-                    target = safe_resolve(user_id, session_id, path)
-                if not target.exists():
-                    return _ok({"path": path or "/", "entries": []})
-                if not target.is_dir():
-                    return _err(f"不是目录: {path}")
-                entries = []
-                for entry in sorted(target.iterdir()):
-                    try:
-                        if entry.is_dir():
-                            entries.append({"name": entry.name, "type": "dir"})
-                        else:
-                            entries.append({
-                                "name": entry.name,
-                                "type": "file",
-                                "size": entry.stat().st_size,
-                            })
-                    except OSError:
-                        continue
-                return _ok({"path": path or "/", "entries": entries})
-            except PathTraversalError as e:
-                return _err(str(e))
+                return _ok(await workspace_request("list", path=path))
             except Exception as e:
                 return _err(f"列目录失败: {e}")
 
@@ -202,25 +205,9 @@ def build_workspace_tools(user_id: int, session_id: str) -> List[BaseTool]:
 
         async def _arun(self, path: str, offset: int = 0, limit: int = 20000) -> str:
             try:
-                target = safe_resolve(user_id, session_id, path)
-                if not target.exists() or not target.is_file():
-                    return _err(f"文件不存在: {path}")
                 max_chars = settings.WORKSPACE_READ_MAX_CHARS
                 limit = min(max(limit, 1), max_chars)
-                try:
-                    text = target.read_text(encoding="utf-8")
-                except UnicodeDecodeError:
-                    return _err(f"二进制文件无法 ws_read，请用 ws_present 呈现给用户下载: {path}")
-                end = min(offset + limit, len(text))
-                return _ok({
-                    "path": path,
-                    "content": text[offset:end],
-                    "total_chars": len(text),
-                    "offset": offset,
-                    "returned_chars": end - offset,
-                })
-            except PathTraversalError as e:
-                return _err(str(e))
+                return _ok(await workspace_request("read", path=path, offset=offset, limit=limit))
             except Exception as e:
                 return _err(f"读文件失败: {e}")
 
@@ -238,17 +225,19 @@ def build_workspace_tools(user_id: int, session_id: str) -> List[BaseTool]:
 
         async def _arun(self, path: str, content: str) -> str:
             try:
-                target = safe_resolve(user_id, session_id, path)
+                path = _validate_workspace_path(path)
                 new_size = len(content.encode("utf-8"))
-                old_size = target.stat().st_size if target.exists() and target.is_file() else 0
+                previous = await workspace_request("stat", path=path)
+                old_size = int(previous.get("size", 0)) if not previous.get("error") else 0
                 delta = max(new_size - old_size, 0)
                 await check_quota(user_id, session_id, delta, final_file_size=new_size)
-                target.parent.mkdir(parents=True, exist_ok=True)
-                target.write_text(content, encoding="utf-8")
-                file_id = await _register_workspace_file(user_id, session_id, target)
+                result = await workspace_request("write", path=path, content=content)
+                if result.get("error"):
+                    return _ok(result)
+                file_id = await _register_workspace_file(user_id, session_id, result["path"], result["size"])
                 return _ok({
-                    "path": relative_to_root(user_id, session_id, target),
-                    "size": new_size,
+                    "path": result["path"],
+                    "size": result["size"],
                     "file_id": file_id,
                 })
             except (PathTraversalError, QuotaExceededError) as e:
@@ -269,32 +258,27 @@ def build_workspace_tools(user_id: int, session_id: str) -> List[BaseTool]:
 
         async def _arun(self, path: str, old: str, new: str, replace_all: bool = False) -> str:
             try:
-                target = safe_resolve(user_id, session_id, path)
-                if not target.exists() or not target.is_file():
-                    return _err(f"文件不存在: {path}")
-                try:
-                    text = target.read_text(encoding="utf-8")
-                except UnicodeDecodeError:
-                    return _err("二进制文件不支持 ws_edit")
-                count = text.count(old)
-                if count == 0:
-                    return _err(f"未找到 old 字符串")
-                if count > 1 and not replace_all:
-                    return _err(f"old 字符串出现 {count} 次，请加 replace_all=true 或提供更具体的上下文")
-                new_text = text.replace(old, new) if replace_all else text.replace(old, new, 1)
-                new_size = len(new_text.encode("utf-8"))
-                old_size = len(text.encode("utf-8"))
+                path = _validate_workspace_path(path)
+                preview = await workspace_request(
+                    "edit", path=path, old=old, new=new, replace_all=replace_all, dry_run=True
+                )
+                if preview.get("error"):
+                    return _ok(preview)
+                new_size = int(preview["size"])
+                old_size = int(preview["old_size"])
                 await check_quota(
                     user_id,
                     session_id,
                     max(new_size - old_size, 0),
                     final_file_size=new_size,
                 )
-                target.write_text(new_text, encoding="utf-8")
-                file_id = await _register_workspace_file(user_id, session_id, target)
+                result = await workspace_request("edit", path=path, old=old, new=new, replace_all=replace_all)
+                if result.get("error"):
+                    return _ok(result)
+                file_id = await _register_workspace_file(user_id, session_id, result["path"], result["size"])
                 return _ok({
-                    "path": relative_to_root(user_id, session_id, target),
-                    "replaced": count if replace_all else 1,
+                    "path": result["path"],
+                    "replaced": result["replaced"],
                     "file_id": file_id,
                 })
             except (PathTraversalError, QuotaExceededError) as e:
@@ -312,14 +296,12 @@ def build_workspace_tools(user_id: int, session_id: str) -> List[BaseTool]:
 
         async def _arun(self, path: str) -> str:
             try:
-                target = safe_resolve(user_id, session_id, path)
-                if not target.exists():
-                    return _err(f"文件不存在: {path}")
-                if target.is_dir():
-                    return _err(f"不允许通过 ws_delete 删目录")
-                target.unlink()
-                await _unregister_workspace_file(user_id, session_id, target)
-                return _ok({"deleted": path})
+                path = _validate_workspace_path(path)
+                result = await workspace_request("delete", path=path)
+                if result.get("error"):
+                    return _ok(result)
+                await _unregister_workspace_file(user_id, session_id, path)
+                return _ok(result)
             except PathTraversalError as e:
                 return _err(str(e))
             except Exception as e:
@@ -344,25 +326,27 @@ def build_workspace_tools(user_id: int, session_id: str) -> List[BaseTool]:
                 presented = []
                 for p in paths:
                     try:
-                        target = safe_resolve(user_id, session_id, p)
+                        p = _validate_workspace_path(p)
                     except PathTraversalError as e:
                         presented.append({"path": p, "error": str(e)})
                         continue
-                    if not target.exists() or not target.is_file():
-                        presented.append({"path": p, "error": "文件不存在"})
-                        continue
-                    if not is_safe_download_ext(target.name):
-                        ext = target.suffix.lower()
+                    name = Path(p).name
+                    if not is_safe_download_ext(name):
+                        ext = Path(name).suffix.lower()
                         presented.append({
                             "path": p,
                             "error": f"扩展名 {ext} 禁止下载暴露（防 XSS/恶意可执行）",
                         })
                         continue
-                    file_id = await _register_workspace_file(user_id, session_id, target)
+                    stat_result = await workspace_request("stat", path=p)
+                    if stat_result.get("error"):
+                        presented.append({"path": p, "error": stat_result["error"]})
+                        continue
+                    file_id = await _register_workspace_file(user_id, session_id, p, stat_result["size"])
                     presented.append({
                         "file_id": file_id,
-                        "name": target.name,
-                        "size": target.stat().st_size,
+                        "name": name,
+                        "size": stat_result["size"],
                         "path": p,
                     })
                 return _ok({

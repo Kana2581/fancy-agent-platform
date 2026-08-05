@@ -18,6 +18,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import signal
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
@@ -194,6 +195,7 @@ def execute(
     workdir: str = ".",
     timeout: int = 30,
     script_path: Optional[str] = None,
+    command_builder=None,
 ) -> dict:
     """在 workdir（会话工作区）内执行用户代码，返回结构化结果。
 
@@ -230,16 +232,28 @@ def execute(
         env["SANDBOX_USER_CODE"] = str(user_code_path)
         env["SANDBOX_OUTPUT_DIR"] = str(work)
 
+        command = (
+            command_builder(Path(meta_dir), runner_path, user_code_path, work)
+            if command_builder
+            else [sys.executable, str(runner_path)]
+        )
+        process = subprocess.Popen(
+            command,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            cwd=str(work),
+            env=env,
+            start_new_session=sys.platform != "win32",
+        )
         try:
-            result = subprocess.run(
-                [sys.executable, str(runner_path)],
-                capture_output=True,
-                text=True,
-                timeout=timeout,
-                cwd=str(work),
-                env=env,
-            )
+            stdout, stderr = process.communicate(timeout=timeout)
         except subprocess.TimeoutExpired:
+            if sys.platform != "win32":
+                os.killpg(process.pid, signal.SIGKILL)
+            else:
+                process.kill()
+            process.communicate()
             return {
                 "error": f"执行超时（超过 {timeout} 秒）",
                 "stdout": "",
@@ -250,9 +264,9 @@ def execute(
 
         after = _snapshot(work)
         return {
-            "stdout": result.stdout,
-            "stderr": result.stderr,
-            "exit_code": result.returncode,
+            "stdout": stdout,
+            "stderr": stderr,
+            "exit_code": process.returncode,
             "produced": _diff_produced(before, after),
         }
     except Exception as e:
