@@ -6,6 +6,7 @@ from app.core.logging_config import get_logger
 from app.utils.langchain.builtin_tools.web_search import build_web_search_tool
 from app.utils.langchain.builtin_tools.web_fetch import build_web_fetch_tool
 from app.utils.langchain.builtin_tools.python_exec import build_python_exec_tool
+from app.utils.langchain.builtin_tools.bash_exec import build_bash_exec_tool
 
 logger = get_logger(__name__)
 
@@ -103,6 +104,16 @@ def build_builtin_tools(
                 tools.append(build_python_exec_tool(user_id=user_id, session_id=session_id))
             except Exception:
                 logger.exception("Failed to build python_exec tool")
+            continue
+
+        if tool_type == "bash_exec":
+            if user_id is None or not session_id:
+                logger.warning("Bash exec tool requires user_id and session_id, skipping")
+                continue
+            try:
+                tools.append(build_bash_exec_tool(user_id=user_id, session_id=session_id))
+            except Exception:
+                logger.exception("Failed to build bash_exec tool")
             continue
 
         builder = _BUILDERS.get(tool_type)

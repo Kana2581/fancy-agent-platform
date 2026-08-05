@@ -108,6 +108,22 @@ async def test_code_can_read_preexisting_workspace_file(
     assert payload["files"] == []
 
 
+async def test_remote_failure_never_executes_backend_fallback(workspace_env, monkeypatch):
+    from app.utils.sandbox_client import SandboxUnavailableError
+
+    monkeypatch.setattr(settings, "SANDBOX_EXEC_URL", "http://sandbox.invalid")
+
+    async def unavailable(*args, **kwargs):
+        raise SandboxUnavailableError("sandbox unavailable")
+
+    monkeypatch.setattr(PythonExecTool, "_exec_remote", unavailable)
+    payload = __import__("json").loads(await PythonExecTool(user_id=9, session_id="no-fallback")._arun(
+        "open('must-not-exist.txt', 'w').write('unsafe')"
+    ))
+    assert "sandbox unavailable" in payload["error"]
+    assert not (Path(settings.WORKSPACE_DIR) / "9" / "no-fallback" / "must-not-exist.txt").exists()
+
+
 def test_run_without_session_degrades_to_scratch(workspace_env):
     """No user/session -> scratch tmp dir, no persistence, filenames only."""
     import json

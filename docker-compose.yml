@@ -2,6 +2,9 @@
 
 services:
   db:
+    # Optional development database. Production deployments use the external
+    # DATABASE_URL from backend/.env and do not enable this profile.
+    profiles: ["local-db"]
     image: mysql:8.0
     container_name: mysql_db
     restart: always
@@ -54,8 +57,6 @@ services:
     expose:
       - "8000"
     depends_on:
-      db:
-        condition: service_healthy
       sandbox:
         condition: service_healthy
 
@@ -67,6 +68,10 @@ services:
     restart: unless-stopped
     volumes:
       - workspaces:/workspaces            # 与 backend 共享同一卷，产物落盘后 backend 直接读
+    # bubblewrap creates user/mount/pid/network namespaces itself. Docker's default
+    # seccomp profile blocks unshare(2), so the runtime must be allowed to create them.
+    security_opt:
+      - seccomp:unconfined
     expose:
       - "9000"                            # 仅 compose 内网，不对外暴露端口
     healthcheck:

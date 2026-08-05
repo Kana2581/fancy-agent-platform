@@ -100,8 +100,8 @@ class Settings:
         self.WEB_FETCH_MAX_CHARS: int = int(os.getenv("WEB_FETCH_MAX_CHARS", "5000"))
         self.WEB_SEARCH_MAX_RESULTS: int = int(os.getenv("WEB_SEARCH_MAX_RESULTS", "5"))
 
-        # 代码执行沙箱服务地址。留空 = 本地进程内子进程沙箱（开发）；
-        # 生产/Docker 设为常驻 sandbox 容器内网地址，如 http://sandbox:9000
+        # 代码执行沙箱服务地址。生产/Docker 必须配置为常驻 sandbox 容器内网地址；
+        # 留空时仅 python_exec 的本地开发测试回退可用，Bash 与文件工具会明确失败。
         self.SANDBOX_EXEC_URL: str = os.getenv("SANDBOX_EXEC_URL", "")
 
         # 上传文件根目录（图片、附件、生图产物都落在这里）

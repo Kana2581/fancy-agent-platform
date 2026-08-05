@@ -6,7 +6,10 @@ FROM python:3.12-slim
 WORKDIR /app
 
 COPY sandbox/requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends bubblewrap bash \
+    && rm -rf /var/lib/apt/lists/* \
+    && pip install --no-cache-dir -r requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple
 
 # 共享 runner（纯 stdlib，无 app 依赖）+ 沙箱服务
 COPY backend/app/utils/sandbox_runner.py /app/sandbox_runner.py
