@@ -27,6 +27,7 @@ import {
   Network,
   Webhook,
   Eye,
+  Braces,
 } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import type { SessionOut } from '../api'
@@ -166,6 +167,7 @@ const Sidebar: React.FC<SidebarProps> = ({
     { icon: Wrench, label: 'API 工具', path: '/api-tools' },
     { icon: BarChart2, label: '用量统计', path: '/stats' },
     { icon: FileText, label: '提示词模板', path: '/prompt-templates' },
+    { icon: Braces, label: '结构化输出', path: '/structured-output-schemas' },
     { icon: Zap, label: '技能管理', path: '/skills' },
     { icon: Brain, label: '记忆管理', path: '/memory' },
     { icon: Network, label: '知识图谱', path: '/knowledge-graph' },

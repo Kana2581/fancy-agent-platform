@@ -13,6 +13,7 @@ function getStreamBaseUrl(): string {
 
 interface UseMessageHandlerProps {
   sessionId: string | undefined
+  structuredOutputSchemaId?: number | null
 }
 
 export interface SiblingInfo {
@@ -98,6 +99,7 @@ function getDefaultSubPath(
 
 export const useMessageHandler = ({
   sessionId,
+  structuredOutputSchemaId = null,
 }: UseMessageHandlerProps): UseMessageHandlerReturn => {
   const { refreshSessions } = useAppContext()
 
@@ -188,7 +190,8 @@ export const useMessageHandler = ({
     rawContent: unknown,
     toolCalls?: ToolCall[],
     parentId?: string | null,
-    usageMetadata?: Record<string, unknown> | null
+    usageMetadata?: Record<string, unknown> | null,
+    artifact?: ChatResponse['artifact']
   ) {
     const content = normalizeContent(rawContent)
 
@@ -205,6 +208,7 @@ export const useMessageHandler = ({
             ...updated[index],
             ...(content && { content: (updated[index].content as string) + content }),
             ...(usageMetadata && { usage_metadata: usageMetadata }),
+            ...(artifact && { artifact }),
           }
           return updated
         }
@@ -220,6 +224,7 @@ export const useMessageHandler = ({
             // parent 为全量列表最后一条（流式场景下即当前激活末尾的 human 消息）
             parent_id: parentId,
             tool_calls: toolCalls,
+            ...(artifact && { artifact }),
           },
         ]
       }
@@ -235,6 +240,7 @@ export const useMessageHandler = ({
             ...(parentId !== undefined && { parent_id: parentId }),
             tool_calls: toolCalls ?? updated[index].tool_calls ?? [],
             ...(usageMetadata !== undefined && { usage_metadata: usageMetadata }),
+            ...(artifact && { artifact }),
           }
           return updated
         }
@@ -248,6 +254,7 @@ export const useMessageHandler = ({
             parent_id: parentId ?? prev[prev.length - 1]?.id ?? null,
             tool_calls: toolCalls,
             ...(usageMetadata !== undefined && { usage_metadata: usageMetadata }),
+            ...(artifact && { artifact }),
           },
         ]
       }
@@ -272,7 +279,8 @@ export const useMessageHandler = ({
       chunk.content,
       chunk.tool_calls,
       chunk.parent_id,
-      chunk.usage_metadata
+      chunk.usage_metadata,
+      chunk.artifact
     )
   }
 
@@ -326,6 +334,18 @@ export const useMessageHandler = ({
         refreshSessions()
         return false
       }
+      if (eventType === 'structured_output') {
+        const data = JSON.parse(dataLine) as {
+          message_id: string
+          artifact: NonNullable<ChatResponse['artifact']>
+        }
+        setAllMessages((prev) =>
+          prev.map((message) =>
+            message.id === data.message_id ? { ...message, artifact: data.artifact } : message
+          )
+        )
+        return false
+      }
       handleStreamMessage(dataLine)
       return false
     })
@@ -333,7 +353,13 @@ export const useMessageHandler = ({
 
   async function startChatStream(
     sid: string,
-    body: { content: string | null; parent_id: string | null; id: string; file_ids?: number[] }
+    body: {
+      content: string | null
+      parent_id: string | null
+      id: string
+      file_ids?: number[]
+      structured_output_schema_id?: number | null
+    }
   ) {
     const baseUrl = getStreamBaseUrl()
     const token = tokenManager.getToken() ?? ''
@@ -385,6 +411,7 @@ export const useMessageHandler = ({
           files: msg.files,
           approval_status: msg.approval_status ?? null,
           usage_metadata: msg.usage_metadata ?? null,
+          artifact: msg.artifact ?? null,
         }))
 
         setAllMessages(normalized)
@@ -437,6 +464,7 @@ export const useMessageHandler = ({
       parent_id: lastId,
       id: newId,
       file_ids: fileIds,
+      structured_output_schema_id: structuredOutputSchemaId,
     })
   }
 
@@ -481,6 +509,7 @@ export const useMessageHandler = ({
       content: editingContent,
       parent_id: msg.parent_id ?? null,
       id: newId,
+      structured_output_schema_id: structuredOutputSchemaId,
     })
   }
 
@@ -502,6 +531,7 @@ export const useMessageHandler = ({
       content: null,
       parent_id: msg.parent_id ?? null,
       id: '',
+      structured_output_schema_id: structuredOutputSchemaId,
     })
   }
 
@@ -554,7 +584,11 @@ export const useMessageHandler = ({
           Accept: 'text/event-stream',
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ message_id: messageId, approved }),
+        body: JSON.stringify({
+          message_id: messageId,
+          approved,
+          structured_output_schema_id: structuredOutputSchemaId,
+        }),
         signal: controller.signal,
       })
 

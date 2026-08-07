@@ -16,6 +16,7 @@ import {
   Check,
   Eye,
   EyeOff,
+  Braces,
 } from 'lucide-react'
 import { useNavigate, useParams } from 'react-router-dom'
 import type {
@@ -26,6 +27,7 @@ import type {
   ImageToolOut,
   BuiltinToolInfo,
   ChatResponse,
+  StructuredOutputSchemaOut,
 } from '../api'
 import {
   AgentApiToolsService,
@@ -41,6 +43,7 @@ import {
   McpService,
   SessionsService,
   SessionSharesService,
+  StructuredOutputSchemasService,
 } from '../api'
 import { CancelError } from '../api/core/CancelablePromise'
 import { MessageBubble } from '../components/message'
@@ -81,6 +84,8 @@ const ChatPage: React.FC = () => {
   const [shareUrl, setShareUrl] = useState<string | null>(null)
   const [shareCopied, setShareCopied] = useState(false)
   const [shareExpiresHours, setShareExpiresHours] = useState<number | ''>(24)
+  const [structuredSchemas, setStructuredSchemas] = useState<StructuredOutputSchemaOut[]>([])
+  const [structuredOutputSchemaId, setStructuredOutputSchemaId] = useState<number | null>(null)
 
   // 中间过程消息显示偏好（全站默认 + 当前会话临时覆盖）
   const [hideIntermediatePref] = useHideIntermediatePref()
@@ -98,7 +103,8 @@ const ChatPage: React.FC = () => {
     const el = textareaRef.current
     if (!el) return
     el.style.height = 'auto'
-    el.style.height = Math.min(el.scrollHeight, 200) + 'px'
+    const nextHeight = Math.max(24, Math.min(el.scrollHeight, 120))
+    el.style.height = `${nextHeight}px`
   }, [message])
 
   // Tool panel state
@@ -160,7 +166,43 @@ const ChatPage: React.FC = () => {
     getSiblingInfo,
     clearStreamError,
     stopStream,
-  } = useMessageHandler({ sessionId })
+  } = useMessageHandler({ sessionId, structuredOutputSchemaId })
+
+  useEffect(() => {
+    StructuredOutputSchemasService.list()
+      .then(setStructuredSchemas)
+      .catch((error) => console.error('加载结构化输出 Schema 失败', error))
+  }, [])
+
+  useEffect(() => {
+    if (!sessionId) {
+      setStructuredOutputSchemaId(null)
+      return
+    }
+    const stored = localStorage.getItem(`structured-output-schema:${sessionId}`)
+    setStructuredOutputSchemaId(stored ? Number(stored) : null)
+  }, [sessionId])
+
+  useEffect(() => {
+    if (!sessionId || localStorage.getItem(`structured-output-schema:${sessionId}`) !== null) {
+      return
+    }
+    const recentArtifact = [...displayMessages]
+      .reverse()
+      .find((item) => item.artifact?.type === 'structured_output')?.artifact
+    if (recentArtifact) {
+      setStructuredOutputSchemaId(recentArtifact.schema_id)
+      localStorage.setItem(`structured-output-schema:${sessionId}`, String(recentArtifact.schema_id))
+    }
+  }, [displayMessages, sessionId])
+
+  const changeStructuredOutputSchema = (value: string) => {
+    const nextId = value ? Number(value) : null
+    setStructuredOutputSchemaId(nextId)
+    if (sessionId) {
+      localStorage.setItem(`structured-output-schema:${sessionId}`, nextId ? String(nextId) : '')
+    }
+  }
 
   // ── 加载 session & agent ──────────────────────────────────────────────────
 
@@ -621,6 +663,7 @@ const ChatPage: React.FC = () => {
                     }
                     files={msg.files ?? undefined}
                     toolCalls={msg.tool_calls ?? undefined}
+                    artifact={msg.artifact ?? undefined}
                     usageMetadata={msg.usage_metadata ?? undefined}
                     messageId={msg.id}
                     isEditing={editingMessageId === msg.id}
@@ -635,9 +678,13 @@ const ChatPage: React.FC = () => {
                   />
                 )
 
+                const isHiddenStructuredTool = (m: ChatResponse) =>
+                  m.type === 'tool' && m.name === 'structured_output'
+
                 const isIntermediate = (m: ChatResponse) =>
                   m.type === 'tool' ||
                   (m.type === 'ai' &&
+                    !m.artifact &&
                     m.name !== '__compressed__' &&
                     Array.isArray(m.tool_calls) &&
                     m.tool_calls.length > 0)
@@ -674,6 +721,7 @@ const ChatPage: React.FC = () => {
                 }
 
                 for (const msg of displayMessages) {
+                  if (isHiddenStructuredTool(msg)) continue
                   if (isIntermediate(msg)) {
                     buffer.push(msg)
                   } else {
@@ -732,7 +780,7 @@ const ChatPage: React.FC = () => {
 
       {/* 输入区域 */}
       {hasSession && (
-        <div className="bg-gray-50 dark:bg-zinc-900 border-t border-gray-200 dark:border-zinc-800 px-6 pt-4 pb-3">
+        <div className="bg-gray-50 dark:bg-zinc-900 border-t border-gray-200 dark:border-zinc-800 px-6 pt-2.5 pb-2">
           <div
             className={`max-w-3xl mx-auto transition-all ${isDraggingOver ? 'ring-2 ring-gray-400 dark:ring-zinc-500 rounded-xl bg-gray-100 dark:bg-zinc-800' : ''}`}
             onDragOver={handleDragOver}
@@ -741,7 +789,7 @@ const ChatPage: React.FC = () => {
           >
             {/* 错误提示条 */}
             {streamError && (
-              <div className="mb-4 flex items-center gap-3 px-4 py-3 bg-red-500/15 rounded-2xl border border-red-400/30 text-red-400">
+              <div className="mb-3 flex items-center gap-3 px-4 py-2.5 bg-red-500/15 rounded-2xl border border-red-400/30 text-red-400">
                 <AlertCircle size={16} className="flex-shrink-0" />
                 <span className="text-sm flex-1">{streamError}</span>
                 <button
@@ -755,11 +803,11 @@ const ChatPage: React.FC = () => {
 
             {/* 工具审批卡片 */}
             {pendingApproval && (
-              <div className="mb-4 bg-white dark:bg-zinc-900 rounded-xl border border-gray-200 dark:border-zinc-800 p-5">
-                <p className="text-sm font-semibold text-gray-700 mb-3">
+              <div className="mb-3 bg-white dark:bg-zinc-900 rounded-xl border border-gray-200 dark:border-zinc-800 p-4">
+                <p className="text-sm font-semibold text-gray-700 mb-2">
                   🔧 Agent 想要调用以下工具，是否批准？
                 </p>
-                <div className="border-t border-gray-200 dark:border-zinc-800 py-3 space-y-1">
+                <div className="border-t border-gray-200 dark:border-zinc-800 py-2.5 space-y-1">
                   {pendingApproval.toolCalls.length > 0 ? (
                     pendingApproval.toolCalls.map((tc, i) => (
                       <div
@@ -782,7 +830,7 @@ const ChatPage: React.FC = () => {
                     <p className="text-xs text-gray-500">（无法获取工具参数详情）</p>
                   )}
                 </div>
-                <div className="border-t border-gray-200 dark:border-zinc-800 pt-3 flex justify-end gap-3">
+                <div className="border-t border-gray-200 dark:border-zinc-800 pt-2.5 flex justify-end gap-3">
                   <button
                     onClick={() => handleApproveTools(false)}
                     className="px-5 py-2 text-sm bg-gray-100 dark:bg-zinc-800 text-gray-800 rounded-xl hover:bg-gray-200 dark:hover:bg-zinc-600 transition-all border border-gray-200 dark:border-zinc-700"
@@ -801,7 +849,7 @@ const ChatPage: React.FC = () => {
 
             {/* 拖放提示覆盖层 */}
             {isDraggingOver && (
-              <div className="mb-3 flex items-center justify-center gap-2 px-4 py-4 bg-gray-100 dark:bg-zinc-800 border-2 border-dashed border-gray-300 dark:border-zinc-600 rounded-2xl text-gray-600 dark:text-zinc-300 text-sm font-medium">
+              <div className="mb-2 flex items-center justify-center gap-2 px-4 py-3 bg-gray-100 dark:bg-zinc-800 border-2 border-dashed border-gray-300 dark:border-zinc-600 rounded-2xl text-gray-600 dark:text-zinc-300 text-sm font-medium">
                 <Paperclip size={16} />
                 松开以上传文件
               </div>
@@ -809,20 +857,20 @@ const ChatPage: React.FC = () => {
 
             {/* 文件预览 */}
             {selectedFiles.length > 0 && (
-              <div className="mb-3 space-y-2">
+              <div className="mb-2 space-y-1.5">
                 {selectedFiles.map((item) => (
                   <div
                     key={item.localId}
-                    className="flex items-center gap-3 px-4 py-3 bg-gray-50 dark:bg-zinc-900 rounded-2xl border border-gray-200 dark:border-zinc-800"
+                    className="flex items-center gap-3 px-3 py-2 bg-gray-50 dark:bg-zinc-900 rounded-xl border border-gray-200 dark:border-zinc-800"
                   >
                     {item.previewUrl ? (
                       <img
                         src={item.previewUrl}
                         alt={item.file.name}
-                        className="w-10 h-10 object-cover rounded-lg flex-shrink-0 border border-gray-200 dark:border-zinc-800"
+                        className="w-9 h-9 object-cover rounded-lg flex-shrink-0 border border-gray-200 dark:border-zinc-800"
                       />
                     ) : (
-                      <div className="w-10 h-10 bg-gray-200 dark:bg-zinc-700 rounded-lg flex items-center justify-center flex-shrink-0">
+                      <div className="w-9 h-9 bg-gray-200 dark:bg-zinc-700 rounded-lg flex items-center justify-center flex-shrink-0">
                         <Paperclip size={18} className="text-gray-500 dark:text-white" />
                       </div>
                     )}
@@ -860,7 +908,30 @@ const ChatPage: React.FC = () => {
               </div>
             )}
 
-            <div className="relative flex gap-3 items-end" ref={toolPanelRef}>
+            <div className="flex items-center gap-1.5 mb-1.5">
+              <Braces size={16} className="text-gray-500 shrink-0" />
+              <ThemedSelect
+                value={structuredOutputSchemaId ?? ''}
+                onChange={changeStructuredOutputSchema}
+                menuPlacement="up"
+                options={[
+                  { value: '', label: '普通对话' },
+                  ...structuredSchemas.map((schema) => ({ value: schema.id, label: schema.name })),
+                ]}
+                disabled={isLoading}
+                className="min-w-0 max-w-xs px-3 py-1.5 text-sm bg-gray-50 dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 rounded-lg text-gray-700 dark:text-zinc-200"
+              />
+              <button
+                type="button"
+                onClick={() => navigate('/structured-output-schemas')}
+                title="管理结构化输出 Schema"
+                className="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 dark:border-zinc-800 text-gray-500 hover:bg-gray-100 dark:hover:bg-zinc-800"
+              >
+                <Braces size={16} />
+              </button>
+            </div>
+
+            <div className="relative flex gap-2 items-end" ref={toolPanelRef}>
               {/* 工具选择面板 */}
               {showToolPanel && (
                 <div className="absolute bottom-full mb-3 left-0 w-80 max-h-[60vh] overflow-y-auto bg-white dark:bg-slate-800/60 rounded-xl border border-gray-200 dark:border-white/15 shadow-lg z-50 p-4 space-y-4">
@@ -1010,7 +1081,7 @@ const ChatPage: React.FC = () => {
               {/* 工具开关按钮 */}
               <button
                 onClick={() => setShowToolPanel((v) => !v)}
-                className={`p-4 rounded-2xl transition-all border shadow-md ${
+                className={`w-10 h-10 p-0 flex items-center justify-center rounded-xl transition-all border shadow-sm ${
                   showToolPanel
                     ? 'bg-gray-200 dark:bg-zinc-700 border-gray-300 dark:border-zinc-600 text-gray-600 dark:text-zinc-400'
                     : 'bg-gray-50 dark:bg-zinc-900 border-gray-200 dark:border-zinc-800 text-gray-400 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-zinc-700'
@@ -1021,8 +1092,8 @@ const ChatPage: React.FC = () => {
               </button>
 
               {/* 文件上传 */}
-              <label className="p-4 bg-gray-50 dark:bg-zinc-900 rounded-2xl cursor-pointer hover:bg-gray-100 dark:hover:bg-zinc-700 transition-all border border-gray-200 dark:border-zinc-800 shadow-md">
-                <Paperclip size={20} className="text-gray-500 dark:text-gray-300" />
+              <label className="w-10 h-10 p-0 flex items-center justify-center bg-gray-50 dark:bg-zinc-900 rounded-xl cursor-pointer hover:bg-gray-100 dark:hover:bg-zinc-700 transition-all border border-gray-200 dark:border-zinc-800 shadow-sm">
+                <Paperclip size={18} className="text-gray-500 dark:text-gray-300" />
                 <input
                   type="file"
                   className="hidden"
@@ -1036,7 +1107,7 @@ const ChatPage: React.FC = () => {
               </label>
 
               {/* 输入框 */}
-              <div className="flex-1 bg-gray-50 dark:bg-zinc-900 rounded-xl px-5 py-4 focus-within:ring-2 focus-within:ring-cyan-400/50 border border-gray-200 dark:border-zinc-800 shadow-lg transition-all">
+              <div className="min-h-11 flex-1 bg-gray-50 dark:bg-zinc-900 rounded-xl px-4 py-2.5 focus-within:ring-2 focus-within:ring-cyan-400/50 border border-gray-200 dark:border-zinc-800 shadow-md transition-all">
                 <textarea
                   ref={textareaRef}
                   value={message}
@@ -1050,7 +1121,7 @@ const ChatPage: React.FC = () => {
                   placeholder="输入消息... (Shift + Enter 换行)"
                   className="w-full bg-transparent resize-none outline-none text-sm text-gray-800 dark:text-gray-200 placeholder-gray-400 dark:placeholder-gray-500 overflow-y-auto"
                   rows={1}
-                  style={{ maxHeight: '200px' }}
+                  style={{ maxHeight: '120px' }}
                   disabled={isLoading}
                 />
               </div>
@@ -1059,7 +1130,7 @@ const ChatPage: React.FC = () => {
               {isLoading ? (
                 <button
                   onClick={stopStream}
-                  className="group relative p-4 bg-gray-50 dark:bg-zinc-900 rounded-2xl border border-rose-400/40 hover:border-rose-400/70 hover:bg-rose-500/10 transition-all shadow-md"
+                  className="group relative w-10 h-10 p-0 flex items-center justify-center bg-gray-50 dark:bg-zinc-900 rounded-xl border border-rose-400/40 hover:border-rose-400/70 hover:bg-rose-500/10 transition-all shadow-sm"
                   title="停止生成"
                 >
                   <span className="relative block w-5 h-5">
@@ -1073,14 +1144,14 @@ const ChatPage: React.FC = () => {
                   disabled={
                     !message.trim() && !selectedFiles.some((item) => item.status === 'uploaded')
                   }
-                  className="p-4 bg- text-white rounded-2xl  hover:scale-110 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 shadow-lg"
+                  className="w-10 h-10 p-0 flex items-center justify-center bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-xl hover:opacity-90 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-md"
                 >
-                  <Send size={20} />
+                  <Send size={18} />
                 </button>
               )}
             </div>
 
-            <p className="text-xs text-gray-500 mt-3 text-center">AI 可能会出错，请核实重要信息</p>
+            <p className="text-xs text-gray-500 mt-2 text-center">AI 可能会出错，请核实重要信息</p>
           </div>
         </div>
       )}

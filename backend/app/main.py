@@ -32,6 +32,7 @@ from app.api.dingtalk_webhook_router import router as dingtalk_webhook_router
 from app.api.discord_interaction_router import router as discord_interaction_router
 from app.api.session_share_router import router as session_share_router
 from app.api.workspace_router import router as workspace_router
+from app.api.structured_output_schema_router import router as structured_output_schema_router
 
 from app.deps.user import get_current_user
 from app.core.logging_config import setup_logging, get_logger
@@ -129,6 +130,7 @@ api_router.include_router(dingtalk_webhook_router)
 api_router.include_router(discord_interaction_router)
 api_router.include_router(session_share_router)
 api_router.include_router(workspace_router)
+api_router.include_router(structured_output_schema_router)
 
 app.include_router(api_router)
 @app.get("/protected")

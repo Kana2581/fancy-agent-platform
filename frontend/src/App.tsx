@@ -23,6 +23,7 @@ import KnowledgeGraphPage from './pages/KnowledgeGraphPage'
 import AgentWebhooksPage from './pages/AgentWebhooksPage'
 import PreferencesPage from './pages/PreferencesPage'
 import SharedSessionPage from './pages/SharedSessionPage'
+import StructuredOutputSchemasPage from './pages/StructuredOutputSchemasPage'
 import { tokenManager } from './utils/TokenManager'
 
 const ProtectedRoutes = () => {
@@ -70,6 +71,7 @@ function App() {
               <Route path="image-gallery" element={<ImageGalleryPage />} />
               <Route path="stats" element={<StatsPage />} />
               <Route path="prompt-templates" element={<PromptTemplatesPage />} />
+              <Route path="structured-output-schemas" element={<StructuredOutputSchemasPage />} />
               <Route path="skills" element={<SkillsPage />} />
               <Route path="memory" element={<MemoryPage />} />
               <Route path="knowledge-graph" element={<KnowledgeGraphPage />} />

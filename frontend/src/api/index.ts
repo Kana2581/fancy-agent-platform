@@ -21,6 +21,14 @@ export type { Body_upload_file_api_v1_files_post } from './models/Body_upload_fi
 export type { ChatFileResponse } from './models/ChatFileResponse'
 export type { ChatRequest } from './models/ChatRequest'
 export type { ChatResponse } from './models/ChatResponse'
+export type {
+  StructuredOutputArtifact,
+  StructuredOutputField,
+  StructuredOutputFieldConfig,
+  StructuredOutputFieldType,
+  StructuredOutputSchemaInput,
+  StructuredOutputSchemaOut,
+} from './models/StructuredOutputSchema'
 export type { CompressRequest } from './models/CompressRequest'
 export type { GeneratedImageOut } from './models/GeneratedImageOut'
 export type { GeneratedImagePageOut } from './models/GeneratedImagePageOut'
@@ -97,6 +105,7 @@ export { ScheduledTasksService } from './services/ScheduledTasksService'
 export { SessionsService } from './services/SessionsService'
 export { StatsService } from './services/StatsService'
 export { PromptTemplatesService } from './services/PromptTemplatesService'
+export { StructuredOutputSchemasService } from './services/StructuredOutputSchemasService'
 export { SkillsService } from './services/SkillsService'
 export { UserMemoriesService } from './services/UserMemoriesService'
 export type { UserMemoryCreate } from './services/UserMemoriesService'
