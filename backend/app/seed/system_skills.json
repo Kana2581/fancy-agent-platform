@@ -21,7 +21,7 @@
     "name": "csv_profile",
     "description": "对工作区里的 CSV 做字段概览（类型/缺失率/数值描述），含可直接运行的脚本",
     "category": "data",
-    "content": "# CSV 概览技能\n\n用 profile.py 对一份 CSV 输出字段类型、缺失率和数值列描述。\n\n## 用法\n1. 先把要分析的 CSV 放到工作区根目录并命名为 `input.csv`（用 ws_write 写入，或把用户上传的文件复制过去）。\n2. 调用 `use_skill(\"csv_profile\")` 把脚本物化到工作区。\n3. 运行 `python_exec(script=\".skills/csv_profile/profile.py\")` 查看结果。\n\n脚本只用预装的 pandas，不联网、不读工作区以外的文件。",
+    "content": "# CSV 概览技能\n\n用 profile.py 对一份 CSV 输出字段类型、缺失率和数值列描述。\n\n## 用法\n1. 先把要分析的 CSV 放到工作区根目录并命名为 `input.csv`。\n2. 用 Bash 读取 `/skills/system/csv_profile/SKILL.md` 和 `/skills/system/csv_profile/profile.py`。\n3. 用 Bash 执行 `python /skills/system/csv_profile/profile.py`。\n\n脚本只用预装的 pandas，不联网、不读工作区以外的文件。",
     "files": [
       {
         "path": "profile.py",

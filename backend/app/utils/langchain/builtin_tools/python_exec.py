@@ -22,6 +22,7 @@ from app.core.config import settings
 from app.core.logging_config import get_logger
 from app.utils import sandbox_runner
 from app.utils.sandbox_client import SandboxUnavailableError, sandbox_client
+from app.utils.langchain.builtin_tools.sandbox_products import handle_sandbox_products
 from app.utils.workspace_path import (
     PathTraversalError,
     ensure_workspace,
@@ -35,15 +36,11 @@ logger = get_logger(__name__)
 _exec_semaphore = asyncio.Semaphore(2)
 
 _EXEC_TIMEOUT = 30
-# 可内联预览的图片扩展名（生成后发布到 generated/ 走公开 URL）
-_IMAGE_EXTS = {"png", "jpg", "jpeg", "gif", "webp"}
-
-
 class PythonExecInput(BaseModel):
     code: Optional[str] = Field(default=None, description="要执行的 Python 代码（与 script 二选一）")
     script: Optional[str] = Field(
         default=None,
-        description="运行工作区内已有脚本文件的相对路径（如 use_skill 物化出来的 .skills/<name>/x.py）。与 code 二选一。",
+        description="运行工作区内已有脚本文件的相对路径。Skill package 中的脚本请使用 bash_exec。与 code 二选一。",
     )
 
 
@@ -52,7 +49,7 @@ class PythonExecTool(BaseTool):
     description: str = (
         "在隔离 sandbox 的当前会话工作区内执行 Python 代码并返回输出。代码的 cwd 就是工作区，"
         "可直接读写工作区文件（与 ws_read/ws_write 共享同一目录）。"
-        "用 code 传内联代码，或用 script 运行工作区里已有的脚本文件（如 use_skill 物化的技能脚本）。"
+        "用 code 传内联代码，或用 script 运行工作区里已有的脚本文件。Skill package 中的脚本请使用 bash_exec。"
         "支持 matplotlib：调用 plt.show() 时图表自动保存并以图片返回。"
         "新生成的文件会出现在用户的「工作区文件」面板。执行超时 30 秒，不提供网络访问。"
     )
@@ -85,51 +82,14 @@ class PythonExecTool(BaseTool):
 
     # ---------- 产物登记 ----------
 
-    async def _publish_image_to_generated(self, src: Path) -> Optional[str]:
-        """把图片产物发布到 generated/<date>/（存储后端由工厂决定），返回访问 URL（供聊天内联）。"""
-        try:
-            from app.utils.image.base_adapter import build_image_url, save_generated_image
-
-            data = await asyncio.to_thread(src.read_bytes)
-            ext = src.suffix.lstrip(".") or "png"
-            object_key = await save_generated_image(data, ext)
-            return build_image_url(object_key)
-        except Exception:
-            logger.exception("python_exec publish image to generated failed")
-            return None
-
     async def _handle_products(self, workdir: Path, produced: List[object]) -> List[dict]:
-        """把执行新增/改动的工作区文件登记为 workspace 文件；图片另发布到 generated/ 取内联 URL。"""
-        # 延迟导入，避免与 workspace_tool 形成循环依赖
-        from app.utils.langchain.builtin_tools.workspace_tool import _register_workspace_file
-
-        files: List[dict] = []
-        for item in produced:
-            if isinstance(item, dict):
-                rel = str(item.get("path", ""))
-                size = item.get("size")
-            else:
-                rel = str(item)
-                size = None
-            target = (workdir / rel)
-            if not target.exists() or not target.is_file():
-                continue
-            entry: dict = {"path": relative_to_root(self.user_id, self.session_id, target)}
-            try:
-                entry["size"] = int(size) if size is not None else target.stat().st_size
-            except OSError:
-                pass
-            file_id = await _register_workspace_file(
-                self.user_id, self.session_id, entry["path"], entry.get("size")
-            )
-            if file_id is not None:
-                entry["file_id"] = file_id
-            if target.suffix.lower().lstrip(".") in _IMAGE_EXTS:
-                url = await self._publish_image_to_generated(target)
-                if url:
-                    entry["url"] = url
-            files.append(entry)
-        return files
+        """Compatibility wrapper for legacy Python execution tests."""
+        return await handle_sandbox_products(
+            self.user_id,
+            self.session_id,
+            workdir,
+            produced,
+        )
 
     # ---------- LangChain 入口 ----------
 

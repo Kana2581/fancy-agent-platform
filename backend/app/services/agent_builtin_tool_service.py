@@ -3,7 +3,7 @@ from typing import List
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.mappers.agent_builtin_tool_mapper import AgentBuiltinToolMapper
-from app.utils.langchain.builtin_tools import VALID_BUILTIN_TOOL_TYPES
+from app.utils.langchain.builtin_tools import VALID_BUILTIN_TOOL_TYPES_WITH_LEGACY
 
 
 class AgentBuiltinToolService:
@@ -16,7 +16,7 @@ class AgentBuiltinToolService:
         return [row.tool_type for row in rows]
 
     async def sync_tools(self, agent_id: int, tool_types: List[str]) -> List[str]:
-        valid = [t for t in tool_types if t in VALID_BUILTIN_TOOL_TYPES]
+        valid = [t for t in tool_types if t in VALID_BUILTIN_TOOL_TYPES_WITH_LEGACY]
         await self.mapper.sync_bind(agent_id, valid)
         await self.db.commit()
         return valid

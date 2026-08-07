@@ -1,12 +1,10 @@
-# 代码执行沙箱架构（python_exec + workspace 统一）
+# Bash 工作区沙箱架构
 
 ## 背景
 
-`python_exec` 历史上是**进程内软沙箱**：子进程 + 净化环境 + 白名单 `__import__` + 屏蔽危险内置 + patch 过的 `open`/`io.open`。它抬高了门槛，但对多租户不可信代码原理上可被逃逸（通过被允许的库如 numpy/pandas 的 `__globals__` 链触达 `os`/`ctypes`）。一旦逃逸，进程能看到宿主机文件系统、环境变量、其他租户工作区。
+历史上 Python、Bash 和 workspace 文件操作分别暴露给模型，工具参数重复且容易误选。
 
-同时 `python_exec` 与 `workspace` 割裂：代码在临时目录跑、产物进 `UPLOAD_DIR/generated/`，而 `ws_*` 操作 `WORKSPACE_DIR/{user}/{session}/`，agent 没法「写代码处理工作区文件」。
-
-本次改造同时解决两件事：**统一**（代码 cwd = 会话工作区）+ **隔离**（执行放进 OS 级隔离的常驻沙箱容器）。
+现在模型只看到一个 `sandbox(command)` Bash 工具，默认 cwd 是会话工作区；文件读写和脚本执行都通过 Bash 完成。执行仍放进 OS 级隔离的常驻沙箱容器。
 
 ## 拓扑
 
@@ -33,16 +31,31 @@
 | `backend/app/utils/sandbox_runner.py` | **单一事实来源**。纯 stdlib、无 app 依赖的软沙箱 runner（runner 模板 + 净化环境 + 白名单 import + open 限制 + 执行前后文件 diff）。backend 本地回退与 sandbox 容器**共用同一份**，构建时 COPY 进镜像。 |
 | `sandbox/server.py` | 极小 FastAPI：`POST /exec`、`GET /health`。`Semaphore(1)` 串行执行。 |
 | `sandbox/Dockerfile` | `python:3.12-slim` + 预装固定数据/计算环境 + 沙箱服务。build context 是**仓库根**，以便 COPY backend 下的 runner。 |
-| `python_exec.py` | 双路执行（远程 sandbox / 本地子进程）+ 产物登记。 |
+| `sandbox_tool.py` | 对模型暴露单参数 `sandbox(command)` 工具。 |
+
+Skill 目录由 sandbox 在执行 Bash 时按用户上下文挂载：系统目录映射为
+`/skills/system` 且只读，当前用户目录映射为 `/skills/user` 且可写。Skill
+包不再通过数据库绑定或专用模型工具暴露；后端在 Agent 构建和 Bash 执行
+完成后现场扫描文件系统。
+
+模型侧 Bash 的 cwd 固定为 `/workspace`；访问 Skill 时在命令中使用清单给出的
+`/skills/system/...` 或 `/skills/user/...` 路径。其他绝对路径和 `..` 均拒绝。
+
+模型侧使用 `sandbox(command)` 处理工作区、Bash 和文件系统 Skill；需要 Python
+时也在 Bash 命令中调用。上传附件在聊天消息构建阶段自动注入，不再作为 sandbox operation 暴露。
 
 ## 执行路径
 
 由 `settings.SANDBOX_EXEC_URL` 决定：
 
-- **已配置**（生产/Docker，`http://sandbox:9000`）：`PythonExecTool._arun` POST 到 sandbox，`rel_dir = "{user_id}/{session_id}"`，在 `/workspaces/{rel_dir}` 内执行。
-- **未配置**（本地 Windows 开发）：进程内子进程沙箱 `sandbox_runner.execute()`，cwd 同样指向会话工作区，保证「统一」语义一致；远程调用异常时也会自动回退到这条路径。
+- **已配置**（生产/Docker，`http://sandbox:9000`）：`sandbox(command)` 通过内部 Bash 执行器 POST 到 sandbox，`rel_dir = "{user_id}/{session_id}"`，在 `/workspaces/{rel_dir}` 内执行。
+- **未配置**（本地 Windows 开发）：Bash 工具明确返回 sandbox 未配置错误。
 
 执行后：新增/改动的工作区文件登记为 `storage_type="workspace"`（进工作区面板）；其中图片（png/jpg/jpeg/gif/webp）另复制到 `UPLOAD_DIR/generated/` 并返回公开 URL，保留聊天内联预览。runner 与 user_code 落在独立临时目录，**不污染工作区**。
+
+用户 Skill 根目录也在 sandbox 执行期间使用暂存副本。工作区和用户 Skill
+的新增/修改内容共同参与单文件、Session 和用户总量配额校验，只有校验通过
+才提交到共享卷；配额失败不会留下 Skill 文件。
 
 ## 安全模型与权衡
 
@@ -72,6 +85,6 @@
 
 ## 验证要点
 
-1. 本地：`cd backend; uv run pytest tests/unit/test_python_exec_persistence.py`（覆盖本地子进程 + 工作区登记 + 图片内联 URL + 读已有文件 + 越界拦截）。
-2. Docker：`docker compose up --build` 后 `docker compose ps` 确认 `code_sandbox` healthy；跑挂了 `python_exec`+`workspace_manager` 的 agent，让它 `ws_write` 一个 csv → `python_exec` 用 pandas 读它画图 → 验证能读到、图表内联、产物进工作区面板。
+1. 本地：`cd backend; uv run pytest tests/unit/test_bash_exec.py tests/unit/test_agent_skill_defaults.py`。
+2. Docker：`docker compose up --build` 后 `docker compose ps` 确认 `code_sandbox` healthy；让 agent 通过 `sandbox(command)` 写入一个 csv，再用 Bash/Python 命令读取并生成图表，验证文件登记和图片内联。
 3. 内存：`docker stats` 观察 sandbox 峰值 < 384M、整机 < 2G。

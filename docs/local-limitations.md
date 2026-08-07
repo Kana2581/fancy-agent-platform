@@ -15,7 +15,7 @@
 |------|-----------|----------|-----------------------------|
 | 核心对话 / Agent | ✅ 正常 | ✅ 正常 | ✅ 正常 |
 | Webhook（Discord / 钉钉 / GitHub 等） | ❌ 不可用 | ⚠️ 需公网 | ⚠️ 需公网 |
-| 图片生成（DALL-E / Stability 等） | ✅ 仅需出网 | ✅ 仅需出网 | ✅ 仅需出网 |
+| 图片生成（OpenAI Images / Stability 等） | ✅ 仅需出网 | ✅ 仅需出网 | ✅ 仅需出网 |
 | Web 搜索（DuckDuckGo） | ✅ 仅需出网 | ✅ 仅需出网 | ✅ 仅需出网 |
 | Web 搜索（Tavily） | ✅ 仅需出网 | ✅ 仅需出网 | ✅ 仅需出网 |
 | 邮件助手 | ✅ 仅需出网 | ✅ 正常 | ✅ 正常 |
@@ -58,7 +58,7 @@ ngrok http 8000
 
 | 提供商 | 所需配置 |
 |--------|----------|
-| OpenAI（DALL-E 2 / 3） | `api_key`，可选 `base_url` |
+| OpenAI Images | `api_key`，可选 `base_url` |
 | Stability AI | `api_key` |
 | SiliconFlow | `api_key` + `base_url` |
 | Aliyun | `api_key` + 区域配置 |

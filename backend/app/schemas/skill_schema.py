@@ -1,5 +1,5 @@
 from typing import List, Optional
-from datetime import datetime
+
 from pydantic import BaseModel
 
 
@@ -8,20 +8,11 @@ class SkillFileIn(BaseModel):
     content: str
 
 
-class SkillFileOut(BaseModel):
-    path: str
-    content: str
-    size: int
-    model_config = {"from_attributes": True}
-
-
 class SkillCreate(BaseModel):
     name: str
     content: str
     description: Optional[str] = None
     category: Optional[str] = None
-    scope: Optional[str] = None  # system/user/session；默认 user
-    session_id: Optional[str] = None
     files: Optional[List[SkillFileIn]] = None
 
 
@@ -33,16 +24,34 @@ class SkillUpdate(BaseModel):
     files: Optional[List[SkillFileIn]] = None
 
 
-class SkillOut(BaseModel):
-    id: int
-    user_id: int
+class SkillFileOut(BaseModel):
+    path: str
+    size: int
+    type: str = "file"
+
+
+class SkillTreeNode(BaseModel):
     name: str
-    content: str
-    description: Optional[str]
-    category: Optional[str]
-    scope: Optional[str] = "user"
-    session_id: Optional[str] = None
+    path: str
+    type: str
+    size: Optional[int] = None
+
+
+class SkillOut(BaseModel):
+    scope: str
+    package_path: str
+    name: str
+    description: str
+    package_status: str
+    error: Optional[str] = None
+    content_hash: Optional[str] = None
+    mount_path: str
     files: List[SkillFileOut] = []
-    created_at: datetime
-    updated_at: datetime
-    model_config = {"from_attributes": True}
+
+
+class SkillFileContentOut(BaseModel):
+    scope: str
+    package_path: str
+    path: str
+    content: str
+    size: int

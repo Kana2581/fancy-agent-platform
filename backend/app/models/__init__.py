@@ -6,7 +6,11 @@ from sqlalchemy.orm import DeclarativeMeta
 
 
 # 遍历当前包下的所有模块
+_LEGACY_SKILL_MODULES = {"skill", "skill_file"}
+
 for loader, module_name, is_pkg in pkgutil.iter_modules(__path__):
+    if module_name in _LEGACY_SKILL_MODULES:
+        continue
     module = importlib.import_module(f".{module_name}", package=__name__)
 
     # 遍历模块里的所有类

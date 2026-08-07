@@ -1,4 +1,5 @@
 from typing import Callable, Any, override
+import json
 
 from langchain.agents import AgentState
 from langchain.agents.middleware import wrap_tool_call, hook_config, before_model, AgentMiddleware
@@ -10,6 +11,33 @@ from langgraph.runtime import Runtime
 from langgraph.types import interrupt, Command
 
 from app.utils.text_file import clean_and_truncate_content
+from app.core.logging_config import get_logger
+
+logger = get_logger(__name__)
+
+
+class ToolExecutionLoggingMiddleware(AgentMiddleware):
+    """Log the original exception before retry middleware creates a generic ToolMessage."""
+
+    async def awrap_tool_call(self, request, handler):
+        try:
+            return await handler(request)
+        except Exception as exc:
+            logger.exception(
+                "tool execution raised name=%s args=%r",
+                getattr(request.tool, "name", None) or request.tool_call.get("name"),
+                request.tool_call.get("args", {}),
+            )
+            return ToolMessage(
+                content=json.dumps({
+                    "error": "工具执行异常",
+                    "exception_type": type(exc).__name__,
+                    "exception": str(exc),
+                }, ensure_ascii=False),
+                name=request.tool_call.get("name"),
+                tool_call_id=request.tool_call.get("id"),
+                status="error",
+            )
 
 
 class ToolCallInterruptMiddleware(AgentMiddleware):
@@ -34,7 +62,7 @@ class ToolCallInterruptMiddleware(AgentMiddleware):
     ) -> ToolMessage | Command[Any]:
         if self.human_in_the_loop and request:
             return interrupt("human in the loop")
-        result = handler(request)
+        result = await handler(request)
         return result
 
 

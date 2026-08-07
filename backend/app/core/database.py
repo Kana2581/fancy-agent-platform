@@ -56,8 +56,6 @@ async def init_db():
         from app.models.message_approval import MessageApproval  # noqa: F401
         from app.models.agent_image_tool import AgentImageTool  # noqa: F401
         from app.models.agent_builtin_tool import AgentBuiltinTool  # noqa: F401
-        from app.models.skill import Skill  # noqa: F401
-        from app.models.skill_file import SkillFile  # noqa: F401
         from app.models.user_memory import UserMemory  # noqa: F401
         from app.models.help_document import HelpDocument  # noqa: F401
         from app.models.kg_graph import KGGraph  # noqa: F401

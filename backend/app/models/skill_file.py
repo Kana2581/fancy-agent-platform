@@ -7,8 +7,8 @@ from app.models.timestamp_model import TimestampMixin
 class SkillFile(Base, TimestampMixin):
     """技能随包携带的文本文件（脚本/模板/说明）。
 
-    use_skill 时物化到会话工作区 .skills/<name>/，agent 用 python_exec 运行。
-    随 skill 级联删除（含 session 级技能在会话结束时的清理）。
+    仅保留给一次性旧数据库迁移和历史测试使用；运行时 Skill 文件来自文件系统。
+    随 Skill 级联删除。
     """
     __tablename__ = "skill_files"
     __table_args__ = (

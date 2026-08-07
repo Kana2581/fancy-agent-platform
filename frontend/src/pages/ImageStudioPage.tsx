@@ -222,7 +222,7 @@ const ImageStudioPage: React.FC = () => {
                     value: t.id,
                     label:
                       (t.provider === 'openai'
-                        ? 'DALL-E'
+                        ? 'OpenAI Images'
                         : t.provider === 'siliconflow'
                           ? 'SiliconFlow'
                           : t.provider === 'aliyun'

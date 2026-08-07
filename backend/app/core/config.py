@@ -1,5 +1,6 @@
 import os
 from datetime import timedelta
+from pathlib import Path
 
 from dotenv import load_dotenv
 from typing import List
@@ -101,7 +102,7 @@ class Settings:
         self.WEB_SEARCH_MAX_RESULTS: int = int(os.getenv("WEB_SEARCH_MAX_RESULTS", "5"))
 
         # 代码执行沙箱服务地址。生产/Docker 必须配置为常驻 sandbox 容器内网地址；
-        # 留空时仅 python_exec 的本地开发测试回退可用，Bash 与文件工具会明确失败。
+        # 留空时 Bash sandbox 会明确返回未配置错误。
         self.SANDBOX_EXEC_URL: str = os.getenv("SANDBOX_EXEC_URL", "")
 
         # 上传文件根目录（图片、附件、生图产物都落在这里）
@@ -116,6 +117,15 @@ class Settings:
         self.WORKSPACE_READ_MAX_CHARS: int = int(os.getenv("WORKSPACE_READ_MAX_CHARS", "20000"))
         # 打包下载总大小上限（MB），防止小服务器被一次性压垮
         self.WORKSPACE_ZIP_MAX_MB: int = int(os.getenv("WORKSPACE_ZIP_MAX_MB", "200"))
+
+        # Skill packages are mounted into both backend and sandbox.  The system
+        # tree is read-only; user packages are writable and owned by the backend.
+        default_system_skills_dir = str(Path(__file__).resolve().parents[3] / "skills")
+        self.SYSTEM_SKILLS_DIR: str = os.getenv("SYSTEM_SKILLS_DIR", default_system_skills_dir)
+        self.USER_SKILLS_DIR: str = os.getenv("USER_SKILLS_DIR", "./data/skill-packages/user")
+        self.SKILL_MAX_FILE_BYTES: int = int(os.getenv("SKILL_MAX_FILE_BYTES", str(64 * 1024)))
+        self.SKILL_MAX_PACKAGE_BYTES: int = int(os.getenv("SKILL_MAX_PACKAGE_BYTES", str(256 * 1024)))
+        self.SKILL_MAX_FILES: int = int(os.getenv("SKILL_MAX_FILES", "100"))
 
         # 应用配置
         self.app_name: str = "my_fastapi_app"

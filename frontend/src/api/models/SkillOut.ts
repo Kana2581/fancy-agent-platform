@@ -1,14 +1,17 @@
-import type { SkillFileOut } from './SkillFileOut'
+export type SkillFileOut = {
+  path: string
+  size: number
+  type: string
+}
+
 export type SkillOut = {
+  scope: 'system' | 'user'
+  package_path: string
   name: string
-  content: string
-  description?: string | null
-  category?: string | null
-  scope?: string | null
-  session_id?: string | null
-  files?: Array<SkillFileOut>
-  id: number
-  user_id: number
-  created_at: string
-  updated_at: string
+  description: string
+  package_status: 'ready' | 'invalid'
+  error?: string | null
+  content_hash?: string | null
+  mount_path: string
+  files: Array<SkillFileOut>
 }
