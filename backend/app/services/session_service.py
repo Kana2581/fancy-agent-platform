@@ -10,7 +10,6 @@ from app.core.config import settings
 from app.core.logging_config import get_logger
 from app.mappers.chat_file_mapper import ChatFileMapper
 from app.mappers.session_mapper import SessionMapper
-from app.mappers.skill_mapper import SkillMapper
 from app.models.chat_file import ChatFile
 from app.models.session import Session
 from app.schemas.session_schema import SessionCreate, SessionUpdate
@@ -94,7 +93,7 @@ class SessionService:
         return res
 
     async def _cleanup_workspace(self, user_id: int, session_id: str) -> None:
-        """删 session 时联动清理：workspace 物理目录、workspace ChatFile 行、session 级 Skill 行。"""
+        """删 session 时联动清理 workspace 物理目录和 ChatFile 行。"""
         try:
             ws_root = get_workspace_root(user_id, session_id)
             if ws_root.exists():
@@ -114,8 +113,3 @@ class SessionService:
                 await self.db.execute(delete(ChatFile).where(ChatFile.id.in_(file_ids)))
         except Exception as e:
             logger.warning(f"清理 workspace ChatFile 行失败 session={session_id}: {e}")
-
-        try:
-            await SkillMapper(self.db).delete_session_skills(session_id)
-        except Exception as e:
-            logger.warning(f"清理 session skills 失败 session={session_id}: {e}")

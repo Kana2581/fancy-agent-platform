@@ -1,14 +1,23 @@
 BUILTIN_TOOL_WEB_SEARCH = "web_search"
 BUILTIN_TOOL_WEB_FETCH = "web_fetch"
+BUILTIN_TOOL_SANDBOX = "sandbox"
 BUILTIN_TOOL_PYTHON_EXEC = "python_exec"
 BUILTIN_TOOL_BASH_EXEC = "bash_exec"
 BUILTIN_TOOL_SCHEDULED_TASK_MANAGER = "scheduled_task_manager"
-BUILTIN_TOOL_SKILL_MANAGER = "skill_manager"
 BUILTIN_TOOL_MEMORY_MANAGER = "memory_manager"
 BUILTIN_TOOL_PROMPT_TEMPLATE_MANAGER = "prompt_template_manager"
 BUILTIN_TOOL_KNOWLEDGE_GRAPH_MANAGER = "knowledge_graph_manager"
 BUILTIN_TOOL_HELP_DOCUMENT_MANAGER = "help_document_manager"
 BUILTIN_TOOL_WORKSPACE_MANAGER = "workspace_manager"
+
+# These values may still exist in persisted rows from older deployments. They
+# are accepted by the runtime and folded into the unified sandbox tool.
+LEGACY_SANDBOX_TOOL_TYPES = {
+    BUILTIN_TOOL_PYTHON_EXEC,
+    BUILTIN_TOOL_BASH_EXEC,
+    BUILTIN_TOOL_WORKSPACE_MANAGER,
+    "skill_manager",
+}
 
 BUILTIN_TOOL_CATALOG = [
     {
@@ -22,24 +31,14 @@ BUILTIN_TOOL_CATALOG = [
         "description": "抓取指定 URL 的网页正文内容",
     },
     {
-        "tool_type": "python_exec",
-        "name": "Python 执行",
-        "description": "执行 Python 代码，支持 matplotlib 图表生成，输出文件以 URL 返回",
-    },
-    {
-        "tool_type": "bash_exec",
-        "name": "Bash 执行",
-        "description": "在隔离会话工作区内执行 Bash 命令（无网络访问）",
+        "tool_type": BUILTIN_TOOL_SANDBOX,
+        "name": "会话沙箱",
+        "description": "在隔离环境中执行 Bash，操作会话工作区和文件系统 Skill",
     },
     {
         "tool_type": "scheduled_task_manager",
         "name": "定时任务管理",
         "description": "查看、创建、修改定时任务（list_scheduled_tasks / create_scheduled_task / update_scheduled_task）",
-    },
-    {
-        "tool_type": "skill_manager",
-        "name": "技能管理",
-        "description": "查看、创建、修改、使用技能（list_my_skills / get_skill / create_skill / update_skill）",
     },
     {
         "tool_type": "memory_manager",
@@ -61,11 +60,7 @@ BUILTIN_TOOL_CATALOG = [
         "name": "帮助文档管理",
         "description": "检索平台帮助文档（list_help_documents / get_help_document），用于回答 Fancy Agent 功能和配置问题",
     },
-    {
-        "tool_type": "workspace_manager",
-        "name": "工作区文件",
-        "description": "在 session 工作区内读写文件并向用户呈现下载（ws_list / ws_read / ws_write / ws_edit / ws_delete / ws_present / uploads_list / uploads_read）。需要 session 上下文",
-    },
 ]
 
 VALID_BUILTIN_TOOL_TYPES = {t["tool_type"] for t in BUILTIN_TOOL_CATALOG}
+VALID_BUILTIN_TOOL_TYPES_WITH_LEGACY = VALID_BUILTIN_TOOL_TYPES | LEGACY_SANDBOX_TOOL_TYPES

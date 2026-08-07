@@ -47,7 +47,7 @@ const ImageToolWizard: React.FC<Props> = ({ initialTool, onSave, onCancel }) => 
     setForm((prev) => ({ ...prev, extra_params: { ...(prev.extra_params ?? {}), [key]: value } }))
 
   const PROVIDER_LABELS: Record<string, string> = {
-    openai: 'DALL-E',
+    openai: 'OpenAI Images',
     stability: 'Stability AI',
     siliconflow: '硅基流动',
     aliyun: '阿里云（千问）',
@@ -184,7 +184,7 @@ const ImageToolWizard: React.FC<Props> = ({ initialTool, onSave, onCancel }) => 
               value={form.provider}
               onChange={(v) => handleProviderChange(v)}
               options={[
-                { value: 'openai', label: 'OpenAI (DALL-E)' },
+                { value: 'openai', label: 'OpenAI Images' },
                 { value: 'stability', label: 'Stability AI' },
                 { value: 'siliconflow', label: '硅基流动 (SiliconFlow)' },
                 { value: 'aliyun', label: '阿里云百炼（Qwen-Image）' },
@@ -228,7 +228,7 @@ const ImageToolWizard: React.FC<Props> = ({ initialTool, onSave, onCancel }) => 
                     set('model', e.target.value)
                     set('default_size', '1024x1024')
                   }}
-                  placeholder="例如：dall-e-3、dall-e-2"
+                  placeholder="例如：gpt-image-1"
                   className={inputClass}
                 />
               </div>

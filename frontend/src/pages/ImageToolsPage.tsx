@@ -7,7 +7,7 @@ import { ImageToolsService } from '../api'
 import ImageToolWizard from '../components/ImageToolWizard'
 
 const PROVIDER_LABELS: Record<string, string> = {
-  openai: 'DALL-E',
+  openai: 'OpenAI Images',
   stability: 'Stability AI',
   siliconflow: '硅基流动',
   aliyun: '阿里云（千问）',
@@ -83,7 +83,7 @@ const ImageToolsPage: React.FC = () => {
           <div>
             <h2 className="text-3xl font-bold text-gray-800">文生图模型</h2>
             <p className="text-sm text-gray-600 mt-1">
-              配置 DALL-E / Stability AI / 硅基流动 / 阿里云千问 文生图模型
+              配置 OpenAI Images / Stability AI / 硅基流动 / 阿里云千问 文生图模型
             </p>
           </div>
           <button

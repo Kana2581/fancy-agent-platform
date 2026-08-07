@@ -16,7 +16,7 @@ import { GeneratedImagesService } from '../api'
 const PAGE_SIZE = 20
 
 const PROVIDER_LABEL: Record<string, string> = {
-  openai: 'DALL-E',
+  openai: 'OpenAI Images',
   stability: 'Stability AI',
   siliconflow: 'SiliconFlow',
 }

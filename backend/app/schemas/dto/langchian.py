@@ -97,7 +97,6 @@ class ValidAgent(BaseModel):
     api_tools: Optional[List[ValidApiTool]] = None
     image_tools: Optional[List[ValidImageTool]] = None
     builtin_tools: Optional[List[str]] = None
-
     @field_validator("mcps")
     @classmethod
     def filter_invalid_mcps(cls, v):

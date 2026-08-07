@@ -1,49 +1,32 @@
-"""Skill 升级（带可执行脚本的能力包）测试。
+"""Skill package creation and validation tests。
 
 覆盖：
 - SkillService.create_skill(files=...) 落 skill_files 行；删 skill 级联删文件
 - 文件校验：越界 path / 超 caps 抛 ValueError
-- use_skill 工具：物化到工作区 .skills/<name>/、返回清单、不产生 ChatFile 行
-- python_exec(script=...)：运行工作区脚本，产物登记为 workspace 文件
-- 安全回归：脚本里 import os 被白名单拦
+- default create_skill tool：创建标准用户 Skill package
 """
 import json
 from pathlib import Path
 
 import pytest
-import pytest_asyncio
 from sqlalchemy import select
-from sqlalchemy.ext.asyncio import async_sessionmaker
 
 from app.core.config import settings
-from app.models.chat_file import ChatFile  # noqa: F401
+from app.models.skill import Skill
 from app.models.skill_file import SkillFile
+from app.schemas.skill_schema import SkillUpdate
 from app.services.skill_service import SkillService, validate_skill_files
 from app.utils.langchain.builtin_tools.python_exec import PythonExecTool
-from app.utils.langchain.builtin_tools.skill_manager_tool import build_skill_manager_tools
 
 
-@pytest_asyncio.fixture
-async def patched_session_factory(async_engine, monkeypatch):
-    factory = async_sessionmaker(async_engine, expire_on_commit=False)
-    monkeypatch.setattr("app.core.database.async_session_factory", factory)
-    import app.deps.db as deps_db
-    monkeypatch.setattr(deps_db, "async_session_factory", factory)
-    yield factory
-
-
-@pytest_asyncio.fixture
+@pytest.fixture
 def workspace_env(tmp_path, monkeypatch):
     monkeypatch.setattr(settings, "SANDBOX_EXEC_URL", "")
     monkeypatch.setattr(settings, "WORKSPACE_DIR", str(tmp_path / "workspaces"))
     monkeypatch.setattr(settings, "UPLOAD_DIR", str(tmp_path / "uploads"))
+    monkeypatch.setattr(settings, "USER_SKILLS_DIR", str(tmp_path / "skills"))
     monkeypatch.setattr(settings, "OSS_URL", "http://test-oss")
     return tmp_path
-
-
-def _use_skill_tool(user_id, session_id):
-    tools = build_skill_manager_tools(user_id, session_id=session_id)
-    return next(t for t in tools if t.name == "use_skill")
 
 
 # ---------- 校验 ----------
@@ -83,77 +66,56 @@ async def test_create_skill_with_files_and_cascade_delete(async_session):
     assert left == []
 
 
-# ---------- use_skill 物化 ----------
+async def test_legacy_session_scope_is_rejected(async_session):
+    with pytest.raises(ValueError, match="仅支持创建 user Skill"):
+        await SkillService(async_session).create_skill({
+            "user_id": 9,
+            "name": "session-demo",
+            "content": "body",
+            "scope": "session",
+            "session_id": "session-1",
+        })
 
-async def test_use_skill_materializes_files(
-    workspace_env, async_engine, async_session, patched_session_factory
-):
-    svc = SkillService(async_session)
-    await svc.create_skill({
-        "user_id": 5,
-        "name": "kit",
-        "content": "说明正文",
-        "files": [{"path": "run.py", "content": "print('hi')"}, {"path": "ref.md", "content": "doc"}],
+
+async def test_purge_legacy_session_skill_removes_package(workspace_env, async_session):
+    legacy = Skill(
+        user_id=9,
+        name="legacy-session",
+        content="body",
+        scope="session",
+        source_type="session",
+        package_path="17",
+    )
+    async_session.add(legacy)
+    await async_session.flush()
+
+    package = Path(settings.USER_SKILLS_DIR) / "9" / "17"
+    package.mkdir(parents=True)
+    (package / "SKILL.md").write_text("legacy", encoding="utf-8")
+
+    assert await SkillService(async_session).purge_legacy_session_skills() == 1
+    assert not package.exists()
+    assert await SkillService(async_session).get_skill(legacy.id) is None
+
+
+async def test_user_skill_directory_uses_name_and_renames(workspace_env, async_session):
+    service = SkillService(async_session)
+    skill = await service.create_skill({
+        "user_id": 9,
+        "name": " hello-trilingual ",
+        "content": "body",
     })
+    original = Path(settings.USER_SKILLS_DIR) / "9" / "hello-trilingual"
+    assert skill.name == "hello-trilingual"
+    assert skill.package_path == "hello-trilingual"
+    assert original.is_dir()
 
-    tool = _use_skill_tool(5, "sess-1")
-    out = json.loads(await tool._arun(name="kit"))
-
-    assert out["content"] == "说明正文"
-    assert set(out["files"]) == {".skills/kit/run.py", ".skills/kit/ref.md"}
-    assert out["runnable"] == [".skills/kit/run.py"]
-
-    ws = Path(settings.WORKSPACE_DIR) / "5" / "sess-1" / ".skills" / "kit"
-    assert (ws / "run.py").read_text(encoding="utf-8") == "print('hi')"
-    assert (ws / "ref.md").read_text(encoding="utf-8") == "doc"
-
-    # 物化不应登记 ChatFile（保持工作区面板干净）
-    rows = (await async_session.execute(select(ChatFile))).scalars().all()
-    assert rows == []
-
-
-# ---------- python_exec script 模式 ----------
-
-async def test_python_exec_script_mode_runs_and_registers_product(
-    workspace_env, async_engine, async_session, patched_session_factory
-):
-    svc = SkillService(async_session)
-    await svc.create_skill({
-        "user_id": 6,
-        "name": "writer",
-        "content": "writes a file",
-        "files": [{"path": "gen.py", "content": "open('out.txt','w').write('generated'); print('done')"}],
-    })
-    await _use_skill_tool(6, "sess-2")._arun(name="writer")
-
-    py = PythonExecTool(user_id=6, session_id="sess-2")
-    payload = json.loads(await py._arun(script=".skills/writer/gen.py"))
-
-    assert payload["exit_code"] == 0
-    assert "done" in payload["stdout"]
-    # 脚本产出的 out.txt 登记为 workspace 文件
-    names = {Path(f["path"]).name for f in payload["files"]}
-    assert "out.txt" in names
-    rows = (await async_session.execute(select(ChatFile))).scalars().all()
-    assert {r.storage_type for r in rows} == {"workspace"}
-
-
-async def test_script_import_os_is_blocked(
-    workspace_env, async_engine, async_session, patched_session_factory
-):
-    svc = SkillService(async_session)
-    await svc.create_skill({
-        "user_id": 7,
-        "name": "evil",
-        "content": "tries os",
-        "files": [{"path": "bad.py", "content": "import os\nprint(os.getcwd())"}],
-    })
-    await _use_skill_tool(7, "sess-3")._arun(name="evil")
-
-    py = PythonExecTool(user_id=7, session_id="sess-3")
-    payload = json.loads(await py._arun(script=".skills/evil/bad.py"))
-    assert payload["exit_code"] != 0
-    assert "安全拦截" in payload["stderr"]
+    updated = await service.update_skill(skill.id, SkillUpdate(name="bonjour-trilingual"))
+    renamed = Path(settings.USER_SKILLS_DIR) / "9" / "bonjour-trilingual"
+    assert updated is not None
+    assert updated.package_path == "bonjour-trilingual"
+    assert renamed.is_dir()
+    assert not original.exists()
 
 
 async def test_python_exec_requires_code_or_script():

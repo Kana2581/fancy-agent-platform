@@ -15,6 +15,9 @@ RUN apt-get update \
 COPY backend/app/utils/sandbox_runner.py /app/sandbox_runner.py
 COPY sandbox/server.py /app/server.py
 
+ENV SYSTEM_SKILLS_ROOT=/skill-packages/system \
+    USER_SKILLS_ROOT=/skill-packages/user
+
 EXPOSE 9000
 
 # 说明：容器内以 root 运行。共享 workspaces 卷由 backend(root) 创建，沙箱需写入产物，

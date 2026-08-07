@@ -244,25 +244,6 @@ CREATE TABLE `session_shares` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 
-CREATE TABLE `skills` (
-  `id` int NOT NULL AUTO_INCREMENT,
-  `user_id` int NOT NULL,
-  `name` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `description` varchar(500) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `category` varchar(50) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `content` text COLLATE utf8mb4_unicode_ci NOT NULL,
-  `created_at` datetime NOT NULL,
-  `updated_at` datetime NOT NULL,
-  `scope` varchar(20) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'user',
-  `session_id` varchar(64) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `uq_skill_scope_name` (`user_id`,`scope`,`session_id`,`name`),
-  KEY `ix_skills_user_id` (`user_id`),
-  KEY `idx_skills_scope` (`scope`),
-  KEY `idx_skills_session` (`session_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
-
 CREATE TABLE `telegram_conversations` (
   `id` int NOT NULL AUTO_INCREMENT,
   `webhook_id` int NOT NULL,
@@ -384,21 +365,6 @@ CREATE TABLE `mcps` (
   KEY `idx_mcps_user_id` (`user_id`),
   CONSTRAINT `fk_mcps_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci ROW_FORMAT=DYNAMIC;
-
-
-CREATE TABLE `skill_files` (
-  `id` int NOT NULL AUTO_INCREMENT,
-  `skill_id` int NOT NULL,
-  `path` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `content` text COLLATE utf8mb4_unicode_ci NOT NULL,
-  `size` int NOT NULL,
-  `created_at` datetime NOT NULL,
-  `updated_at` datetime NOT NULL,
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `uq_skill_file_path` (`skill_id`,`path`),
-  KEY `ix_skill_files_skill_id` (`skill_id`),
-  CONSTRAINT `skill_files_ibfk_1` FOREIGN KEY (`skill_id`) REFERENCES `skills` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 
 CREATE TABLE `agents` (

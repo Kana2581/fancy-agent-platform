@@ -85,13 +85,6 @@ def get_prompt_template_service(db: AsyncSession = Depends(get_db)) -> PromptTem
     return PromptTemplateService(db=db)
 
 
-from app.services.skill_service import SkillService
-
-
-def get_skill_service(db: AsyncSession = Depends(get_db)) -> SkillService:
-    return SkillService(db=db)
-
-
 from app.services.user_memory_service import UserMemoryService
 
 

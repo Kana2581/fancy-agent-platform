@@ -76,6 +76,170 @@ async def test_exec_rejects_over_quota_output_without_persisting_it(sandbox_root
     assert not (sandbox_root / "12" / "session-a" / "too-large.txt").exists()
 
 
+async def test_exec_rejects_over_user_quota_skill_output_without_persisting_it(sandbox_root, tmp_path, monkeypatch):
+    monkeypatch.setattr(sandbox_server, "_bwrap_healthy", lambda: True)
+    user_skills_root = tmp_path / "skill-packages" / "user"
+    monkeypatch.setattr(sandbox_server, "USER_SKILLS_ROOT", user_skills_root.resolve())
+
+    def write_skill_file(_command, _workdir, _cwd, _timeout, _mounts, skill_roots):
+        user_root = next(source for source, _, _, scope in skill_roots if scope == "user")
+        package = user_root / "generated"
+        package.mkdir(parents=True, exist_ok=True)
+        (package / "output.bin").write_bytes(b"12345")
+        return {
+            "stdout": "",
+            "stderr": "",
+            "exit_code": 0,
+            "produced": [],
+            "changed_files": [],
+            "deleted_files": [],
+        }
+
+    monkeypatch.setattr(sandbox_server, "_run_bash", write_skill_file)
+    result = await _post("/exec", {
+        "runtime": "bash",
+        "rel_dir": "12/session-a",
+        "command": "ignored",
+        "max_file_bytes": 100,
+        "max_session_bytes": 100,
+        "max_user_bytes": 4,
+        "max_files": 10,
+        "skill_roots": [{"scope": "user", "user_id": 12, "read_only": False}],
+    })
+
+    assert "用户配额超限" in result["error"]
+    assert not (user_skills_root / "12" / "generated" / "output.bin").exists()
+
+
+async def test_exec_does_not_count_skill_bytes_toward_session_quota(sandbox_root, tmp_path, monkeypatch):
+    monkeypatch.setattr(sandbox_server, "_bwrap_healthy", lambda: True)
+    user_skills_root = tmp_path / "skill-packages" / "user"
+    monkeypatch.setattr(sandbox_server, "USER_SKILLS_ROOT", user_skills_root.resolve())
+
+    def write_skill_file(_command, workdir, _cwd, _timeout, _mounts, skill_roots):
+        (workdir / "workspace.txt").write_bytes(b"1234")
+        user_root = next(source for source, _, _, scope in skill_roots if scope == "user")
+        package = user_root / "generated"
+        package.mkdir(parents=True, exist_ok=True)
+        (package / "skill.txt").write_bytes(b"56789")
+        return {"stdout": "", "stderr": "", "exit_code": 0, "produced": [], "changed_files": [], "deleted_files": []}
+
+    monkeypatch.setattr(sandbox_server, "_run_bash", write_skill_file)
+    result = await _post("/exec", {
+        "runtime": "bash",
+        "rel_dir": "12/session-a",
+        "command": "ignored",
+        "max_file_bytes": 100,
+        "max_session_bytes": 4,
+        "max_user_bytes": 100,
+        "max_files": 10,
+        "skill_roots": [{"scope": "user", "user_id": 12, "read_only": False}],
+    })
+
+    assert "error" not in result
+    assert (sandbox_root / "12" / "session-a" / "workspace.txt").read_bytes() == b"1234"
+    assert (user_skills_root / "12" / "generated" / "skill.txt").read_bytes() == b"56789"
+
+
+async def test_exec_rolls_back_skill_when_workspace_commit_fails(sandbox_root, tmp_path, monkeypatch):
+    monkeypatch.setattr(sandbox_server, "_bwrap_healthy", lambda: True)
+    user_skills_root = tmp_path / "skill-packages" / "user"
+    monkeypatch.setattr(sandbox_server, "USER_SKILLS_ROOT", user_skills_root.resolve())
+
+    def write_skill_file(_command, workdir, _cwd, _timeout, _mounts, skill_roots):
+        (workdir / "workspace.txt").write_text("new", encoding="utf-8")
+        user_root = next(source for source, _, _, scope in skill_roots if scope == "user")
+        package = user_root / "generated"
+        package.mkdir(parents=True, exist_ok=True)
+        (package / "skill.txt").write_text("new", encoding="utf-8")
+        return {"stdout": "", "stderr": "", "exit_code": 0, "produced": [], "changed_files": [], "deleted_files": []}
+
+    def fail_workspace_commit(_stage, _workdir):
+        raise OSError("workspace commit failed")
+
+    monkeypatch.setattr(sandbox_server, "_run_bash", write_skill_file)
+    monkeypatch.setattr(sandbox_server, "_commit_staged_workspace", fail_workspace_commit)
+    request = sandbox_server.ExecRequest(
+        runtime="bash",
+        rel_dir="12/session-a",
+        command="ignored",
+        max_file_bytes=100,
+        max_session_bytes=100,
+        max_user_bytes=100,
+        max_files=10,
+        skill_roots=[{"scope": "user", "user_id": 12, "read_only": False}],
+    )
+
+    with pytest.raises(OSError, match="workspace commit failed"):
+        await sandbox_server.exec_code(request)
+    assert not (sandbox_root / "12" / "session-a" / "workspace.txt").exists()
+    assert not (user_skills_root / "12" / "generated" / "skill.txt").exists()
+
+
+async def test_exec_commits_valid_user_skill_output(tmp_path, monkeypatch):
+    monkeypatch.setattr(sandbox_server, "_bwrap_healthy", lambda: True)
+    user_skills_root = tmp_path / "skill-packages" / "user"
+    monkeypatch.setattr(sandbox_server, "USER_SKILLS_ROOT", user_skills_root.resolve())
+
+    def write_skill_file(_command, _workdir, _cwd, _timeout, _mounts, skill_roots):
+        user_root = next(source for source, _, _, scope in skill_roots if scope == "user")
+        package = user_root / "generated"
+        package.mkdir(parents=True, exist_ok=True)
+        (package / "SKILL.md").write_text("---\nname: generated\ndescription: test\n---\n", encoding="utf-8")
+        return {"stdout": "", "stderr": "", "exit_code": 0, "produced": [], "changed_files": [], "deleted_files": []}
+
+    monkeypatch.setattr(sandbox_server, "_run_bash", write_skill_file)
+    result = await _post("/exec", {
+        "runtime": "bash",
+        "rel_dir": "12/session-a",
+        "command": "ignored",
+        "max_file_bytes": 1000,
+        "max_session_bytes": 1000,
+        "max_user_bytes": 1000,
+        "max_files": 10,
+        "skill_roots": [{"scope": "user", "user_id": 12, "read_only": False}],
+    })
+
+    assert result["skill_changed_files"] == [{
+        "scope": "user",
+        "package_path": "generated",
+        "path": "SKILL.md",
+        "size": 46,
+    }]
+    assert (user_skills_root / "12" / "generated" / "SKILL.md").is_file()
+
+
+async def test_exec_counts_existing_user_skill_bytes_toward_user_quota(tmp_path, monkeypatch):
+    monkeypatch.setattr(sandbox_server, "_bwrap_healthy", lambda: True)
+    user_skills_root = tmp_path / "skill-packages" / "user"
+    existing_root = user_skills_root / "12" / "existing"
+    existing_root.mkdir(parents=True)
+    (existing_root / "data.txt").write_bytes(b"1234")
+    monkeypatch.setattr(sandbox_server, "USER_SKILLS_ROOT", user_skills_root.resolve())
+
+    def write_skill_file(_command, _workdir, _cwd, _timeout, _mounts, skill_roots):
+        user_root = next(source for source, _, _, scope in skill_roots if scope == "user")
+        package = user_root / "generated"
+        package.mkdir(parents=True, exist_ok=True)
+        (package / "data.txt").write_bytes(b"x")
+        return {"stdout": "", "stderr": "", "exit_code": 0, "produced": [], "changed_files": [], "deleted_files": []}
+
+    monkeypatch.setattr(sandbox_server, "_run_bash", write_skill_file)
+    result = await _post("/exec", {
+        "runtime": "bash",
+        "rel_dir": "12/session-a",
+        "command": "ignored",
+        "max_file_bytes": 1000,
+        "max_session_bytes": 1000,
+        "max_user_bytes": 4,
+        "max_files": 10,
+        "skill_roots": [{"scope": "user", "user_id": 12, "read_only": False}],
+    })
+
+    assert "用户配额超限" in result["error"]
+    assert not (user_skills_root / "12" / "generated" / "data.txt").exists()
+
+
 async def test_workspace_edit_dry_run_handles_content_larger_than_read_limit(sandbox_root):
     base = {"rel_dir": "12/session-a", "path": "large.txt"}
     content = "a" * 20_000 + "target" + "z" * 20_000

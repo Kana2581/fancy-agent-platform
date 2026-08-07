@@ -4,12 +4,12 @@ from langchain.agents import create_agent
 from langchain_core.language_models import BaseChatModel
 from langchain_core.tools import BaseTool
 from app.schemas.dto.langchian import ValidAgent, ValidChatModel
+from app.services.skill_catalog_service import SkillCatalogEntry, scan_skill_catalog
 from langchain.chat_models import init_chat_model
 from langchain_mcp_adapters.client import MultiServerMCPClient
 from typing import Optional
 from langchain.agents.middleware.tool_call_limit import ToolCallLimitMiddleware
 from langchain.agents.middleware.model_call_limit import ModelCallLimitMiddleware
-from langchain.agents.middleware import ToolRetryMiddleware
 
 import asyncio
 import json
@@ -18,10 +18,13 @@ from datetime import datetime, timezone, timedelta
 from app.core.logging_config import get_logger
 from app.utils.langchain.http_tool_factory import build_tool_from_config
 from app.utils.langchain.image_tool_factory import build_image_tool_from_config
-from app.utils.langchain.middleware import MessageLimitMiddleware, ToolCallInterruptMiddleware
+from app.utils.langchain.middleware import (
+    MessageLimitMiddleware,
+    ToolCallInterruptMiddleware,
+    ToolExecutionLoggingMiddleware,
+)
 
 logger = get_logger(__name__)
-
 
 def create_langchain_agent_with_middleware(model: BaseChatModel,
                                            tools: Optional[List[BaseTool]],
@@ -34,10 +37,9 @@ def create_langchain_agent_with_middleware(model: BaseChatModel,
     from app.core.config import settings
     tool_limiter = ToolCallLimitMiddleware(run_limit=settings.AGENT_TOOL_CALL_LIMIT, exit_behavior="end")
     model_limiter = ModelCallLimitMiddleware(run_limit=settings.AGENT_MODEL_CALL_LIMIT, exit_behavior="end")
-    tool_retry = ToolRetryMiddleware()
+    tool_logger = ToolExecutionLoggingMiddleware()
     message_limiter = MessageLimitMiddleware(max_token)
-    middleware = [tool_retry, tool_limiter, model_limiter, message_limiter]
-    #middleware = [tool_retry, tool_limiter, model_limiter, message_limiter]
+    middleware = [tool_logger, tool_limiter, model_limiter, message_limiter]
     if human_in_the_loop:
         middleware = [ToolCallInterruptMiddleware(True)] + middleware
 
@@ -52,6 +54,7 @@ def create_langchain_agent_with_middleware(model: BaseChatModel,
 async def _build_model_and_tools(
     agent_data: ValidAgent,
     session_id: Optional[str] = None,
+    skills: Optional[List[SkillCatalogEntry]] = None,
 ) -> Tuple[BaseChatModel, List[BaseTool]]:
     """Shared logic for building the LLM model and tool list from agent config."""
     model_config = ValidChatModel.model_validate(agent_data.llm)
@@ -61,6 +64,9 @@ async def _build_model_and_tools(
     model = init_chat_model(**model_kwargs)
 
     tools: List[BaseTool] = []
+
+    if skills is None:
+        skills = await _get_effective_skills(agent_data)
 
     if agent_data.mcps:
         client_config = {}
@@ -75,7 +81,7 @@ async def _build_model_and_tools(
 
         client = MultiServerMCPClient(client_config)
         try:
-            tools = await asyncio.wait_for(client.get_tools(), timeout=30)
+            tools.extend(await asyncio.wait_for(client.get_tools(), timeout=30))
         except asyncio.TimeoutError:
             logger.warning("MCP tool fetch timed out (>30s) for servers: %s", list(client_config.keys()))
         except Exception:
@@ -127,9 +133,22 @@ async def _get_core_memory_prompt(user_id: int) -> str:
         return ""
 
 
-async def _build_system_prompt(agent_data: ValidAgent) -> str:
+async def _get_effective_skills(agent_data: ValidAgent) -> List[SkillCatalogEntry]:
+    """Scan all current system and user Skill packages for this user."""
+    try:
+        return await asyncio.to_thread(scan_skill_catalog, agent_data.user_id, "all", False)
+    except Exception:
+        logger.exception("Failed to scan filesystem Skills")
+        return []
+
+
+async def _build_system_prompt(
+    agent_data: ValidAgent,
+    skills: Optional[List[SkillCatalogEntry]] = None,
+    tools: Optional[List[BaseTool]] = None,
+) -> str:
     """Return system prompt; core memories always included so the model has them regardless of tools."""
-    system_prompt = agent_data.system_prompt
+    system_prompt = agent_data.system_prompt or ""
     if agent_data.user_id:
         system_prompt += await _get_core_memory_prompt(agent_data.user_id)
     if agent_data.image_tools:
@@ -137,6 +156,23 @@ async def _build_system_prompt(agent_data: ValidAgent) -> str:
             "\n\nWhen you generate an image using an image tool, "
             "you MUST display it in your response using markdown image syntax: "
             "![description](url)"
+        )
+    if skills is None:
+        skills = await _get_effective_skills(agent_data)
+    skill_runtime_available = any(
+        getattr(tool, "name", None) == "sandbox"
+        and getattr(tool, "supports_skills", False)
+        for tool in (tools or [])
+    )
+    if skills and skill_runtime_available:
+        entries = "\n".join(
+            f"- {skill.name} [{skill.scope}] ({skill.mount_path}): {skill.description}"
+            for skill in skills
+        )
+        system_prompt += (
+            "\n\n## 可用 Skills\n" + entries
+            + "\n对匹配的任务，必须先用 sandbox(command=...) 读取对应目录下的 SKILL.md，再按其中说明执行。"
+            + "必须直接使用清单给出的 mount_path；不要根据 Skill 名称推断 system/user 目录。系统 Skill 只读；用户 Skill 可在 /skills/user 下创建、修改和执行。"
         )
     return system_prompt
 
@@ -146,8 +182,9 @@ async def get_langchian_agent(agent_data: ValidAgent, session_id: Optional[str] 
     if agent_data.llm is None:
         raise ValueError("Agent has no LLM config")
 
-    model, tools = await _build_model_and_tools(agent_data, session_id=session_id)
-    system_prompt = await _build_system_prompt(agent_data)
+    skills = await _get_effective_skills(agent_data)
+    model, tools = await _build_model_and_tools(agent_data, session_id=session_id, skills=skills)
+    system_prompt = await _build_system_prompt(agent_data, skills=skills, tools=tools)
     return create_langchain_agent_with_middleware(
         model=model,
         tools=tools,
@@ -162,8 +199,9 @@ async def get_langchain_agent_and_tools(agent_data: ValidAgent, session_id: Opti
     if agent_data.llm is None:
         raise ValueError("Agent has no LLM config")
 
-    model, tools = await _build_model_and_tools(agent_data, session_id=session_id)
-    system_prompt = await _build_system_prompt(agent_data)
+    skills = await _get_effective_skills(agent_data)
+    model, tools = await _build_model_and_tools(agent_data, session_id=session_id, skills=skills)
+    system_prompt = await _build_system_prompt(agent_data, skills=skills, tools=tools)
     agent = create_langchain_agent_with_middleware(
         model=model,
         tools=tools,

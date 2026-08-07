@@ -14,6 +14,7 @@ backend 本地回退路径与独立 sandbox 容器服务两侧共用同一份逻
 转义问题。
 """
 import os
+import json
 import shutil
 import subprocess
 import sys
@@ -71,6 +72,7 @@ def make_clean_env(meta_dir: str) -> dict:
 _RUNNER_TEMPLATE = """\
 import sys as _sys
 import os as _os
+import json as _json
 import builtins as _builtins_mod
 
 # ---------- matplotlib 图表保存设置 ----------
@@ -112,15 +114,24 @@ _safe_builtins['__import__'] = _safe_import
 for _k in ('exec', 'eval', 'compile', 'breakpoint'):
     _safe_builtins.pop(_k, None)
 
-# ---------- 沙箱文件访问：open / io.open 限制在 cwd（会话工作区）内 ----------
+# ---------- 沙箱文件访问：工作区 + backend 明确授予的 Skill 根 ----------
 _SANDBOX_DIR = _os.path.realpath(_os.path.abspath('.'))
+_READ_ROOTS = [_SANDBOX_DIR]
+_WRITE_ROOTS = [_SANDBOX_DIR]
+for _raw in _os.environ.get('SANDBOX_READ_ROOTS', '').split(_os.pathsep):
+    if _raw:
+        _READ_ROOTS.append(_os.path.realpath(_raw))
+for _raw in _os.environ.get('SANDBOX_WRITE_ROOTS', '').split(_os.pathsep):
+    if _raw:
+        _WRITE_ROOTS.append(_os.path.realpath(_raw))
 _real_open = _builtins_mod.open
 
 def _safe_open(file, mode='r', *_a, **_kw):
     if isinstance(file, (str, bytes)):
         _abs = _os.path.realpath(_os.path.abspath(str(file)))
-        if not _abs.startswith(_SANDBOX_DIR):
-            raise PermissionError(f"沙箱限制：不允许访问工作区外路径: {{file}}")
+        _roots = _WRITE_ROOTS if any(_flag in mode for _flag in ('w', 'a', 'x', '+')) else _READ_ROOTS
+        if not any(_abs == _root or _abs.startswith(_root + _os.sep) for _root in _roots):
+            raise PermissionError(f"沙箱限制：不允许访问授权目录外路径: {{file}}")
     return _real_open(file, mode, *_a, **_kw)
 
 _safe_builtins['open'] = _safe_open
@@ -131,8 +142,9 @@ try:
     def _safe_io_open(file, mode='r', *_a, **_kw):
         if isinstance(file, (str, bytes)):
             _abs = _os.path.realpath(_os.path.abspath(str(file)))
-            if not _abs.startswith(_SANDBOX_DIR):
-                raise PermissionError(f"沙箱限制：不允许访问工作区外路径: {{file}}")
+            _roots = _WRITE_ROOTS if any(_flag in mode for _flag in ('w', 'a', 'x', '+')) else _READ_ROOTS
+            if not any(_abs == _root or _abs.startswith(_root + _os.sep) for _root in _roots):
+                raise PermissionError(f"沙箱限制：不允许访问授权目录外路径: {{file}}")
         return _real_io_open(file, mode, *_a, **_kw)
     _io_mod.open = _safe_io_open
 except Exception:
@@ -149,6 +161,9 @@ except SyntaxError as _e:
     _sys.exit(1)
 
 _glb = {{'__builtins__': _safe_builtins, '__name__': '__main__'}}
+_sys.argv = [_os.environ.get('SANDBOX_USER_CODE', '<user_code>')] + _json.loads(
+    _os.environ.get('SANDBOX_SCRIPT_ARGS', '[]')
+)
 try:
     exec(_code_obj, _glb)
 except ImportError as _e:
@@ -202,7 +217,7 @@ def execute(
     两种入口（二选一）：
     - code：内联代码字符串，写入私有临时目录后作为入口。
     - script_path：工作区内已有脚本的绝对路径，**直接以该文件为入口用户代码**
-      （用于运行 use_skill 物化出来的 .skills/... 脚本）。受同一套白名单/open 限制。
+      （用于运行已绑定 Skill package 中的脚本）。受同一套白名单/open 限制。
 
     返回 {stdout, stderr, exit_code, produced}；produced 为本次执行新增/改动的文件相对路径。
     runner 落在独立临时目录，不污染工作区。

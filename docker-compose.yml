@@ -45,10 +45,16 @@ services:
     environment:
       # 代码执行走常驻沙箱容器（内网地址，不挂 docker.sock）
       SANDBOX_EXEC_URL: http://sandbox:9000
+      SYSTEM_SKILLS_DIR: /skill-packages/system
+      USER_SKILLS_DIR: /skill-packages/user
+      WORKSPACE_DIR: /data/workspaces
+      UPLOAD_DIR: /data/uploads
     volumes:
       - ./backend/logs:/app/logs
       - uploads:/data/uploads
       - workspaces:/data/workspaces
+      - skill_packages:/skill-packages/user
+      - ${SYSTEM_SKILLS_DIR:-./skills}:/skill-packages/system:ro
     deploy:
       resources:
         limits:
@@ -66,8 +72,13 @@ services:
       dockerfile: sandbox/Dockerfile
     container_name: code_sandbox
     restart: unless-stopped
+    # Bubblewrap creates a PID namespace; Docker init must reap its exited
+    # namespace leaders or the pids limit is eventually exhausted by zombies.
+    init: true
     volumes:
       - workspaces:/workspaces            # 与 backend 共享同一卷，产物落盘后 backend 直接读
+      - skill_packages:/skill-packages/user
+      - ${SYSTEM_SKILLS_DIR:-./skills}:/skill-packages/system:ro
     # bubblewrap creates user/mount/pid/network namespaces itself. Docker's default
     # seccomp profile blocks unshare(2), so the runtime must be allowed to create them.
     security_opt:
@@ -85,6 +96,7 @@ services:
         limits:
           cpus: '0.5'
           memory: 384M
+          pids: 256
 
   nginx:
     image: nginx:latest                   # 修复：固定版本，避免 latest 自动升级
@@ -103,4 +115,5 @@ services:
 volumes:
   uploads:
   workspaces:
+  skill_packages:
   mysql_data:

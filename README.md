@@ -46,7 +46,7 @@
 - **流式对话** — SSE 实时输出，支持分支消息树
 - **Human-in-the-loop** — 工具调用前可暂停等待用户审批
 - **会话工作区** — 每个会话拥有独立的文件沙箱目录，Agent 可在其中读写文件（代码、数据、报告等），生成的文件会实时出现在侧边栏，支持单文件下载或打包下载全部；代码执行沙箱与工作区打通，脚本产物直接落盘可见
-- **图像生成工作台** — 支持 DALL-E、Stability AI、SiliconFlow 等多个供应商
+- **图像生成工作台** — 支持 OpenAI Images、Stability AI、SiliconFlow 等多个供应商
 - **文件上传与解析** — 支持 PDF、DOCX、TXT、CSV、JSON 等格式内联到消息
 - **定时任务** — 配置 daily/weekly/monthly 定时任务，结果可通过邮件发送
 - **邮件 Agent** — 轮询邮箱，将邮件路由到指定 Agent 处理
@@ -65,7 +65,7 @@
 | `python_exec` | 隔离子进程沙箱里执行 Python 代码（白名单导入、受限文件访问） |
 | `workspace` | 读写当前会话的文件工作区，产物自动出现在侧边栏 |
 | `scheduled_task_manager` | 让 Agent 自己创建/管理定时任务 |
-| `skill_manager` | 按需拉取技能（SKILL.md + 附带脚本）并在工作区运行 |
+| `bash_exec` | 在隔离沙箱中操作会话工作区和用户 Skill 目录；Skill 包通过文件系统现场扫描 |
 | `memory_manager` | 读写用户长期记忆（core 记忆会自动注入系统提示词） |
 | `prompt_template_manager` | 查询可复用的提示词模板 |
 | `knowledge_graph_manager` | 抽取/查询知识图谱节点与关系 |
@@ -245,6 +245,8 @@ bash deploy.sh
 | `S3_PRESIGN_EXPIRE` | — | 预签名 URL 有效期（秒），仅 `presigned` 模式生效，默认 `3600` |
 | `UPLOAD_DIR` | ✅ | 文件上传存储目录，如 `./data/uploads`（`STORAGE_BACKEND=local` 时有效） |
 | `WORKSPACE_DIR` | ✅ | Agent 工作区目录，如 `./data/workspaces` |
+| `SYSTEM_SKILLS_DIR` | — | 系统 Skill 宿主目录，Docker 中只读挂载到 `/skill-packages/system` |
+| `USER_SKILLS_DIR` | — | 用户 Skill 根目录，Docker 中由 `skill_packages` 卷挂载；包按 `<user_id>/<skill-name>` 存储 |
 | `SEARCH_PROVIDER` | — | `duckduckgo`（默认）或 `tavily` |
 | `TAVILY_API_KEY` | — | `SEARCH_PROVIDER=tavily` 时必填 |
 | `EMAIL_ENABLED` | — | 是否启用邮件 Agent（`true` / `false`，默认 `false`） |

@@ -5,8 +5,8 @@ from langchain_core.tools import BaseTool
 from app.core.logging_config import get_logger
 from app.utils.langchain.builtin_tools.web_search import build_web_search_tool
 from app.utils.langchain.builtin_tools.web_fetch import build_web_fetch_tool
-from app.utils.langchain.builtin_tools.python_exec import build_python_exec_tool
-from app.utils.langchain.builtin_tools.bash_exec import build_bash_exec_tool
+from app.utils.langchain.builtin_tools.sandbox_tool import build_sandbox_tool
+from app.utils.langchain.builtin_tools import LEGACY_SANDBOX_TOOL_TYPES, BUILTIN_TOOL_SANDBOX
 
 logger = get_logger(__name__)
 
@@ -24,7 +24,15 @@ def build_builtin_tools(
     llm_config: Optional[dict] = None,
 ) -> List[BaseTool]:
     tools = []
+    if any(tool_type == BUILTIN_TOOL_SANDBOX or tool_type in LEGACY_SANDBOX_TOOL_TYPES for tool_type in tool_types):
+        try:
+            tools.append(build_sandbox_tool(user_id=user_id, session_id=session_id))
+        except Exception:
+            logger.exception("Failed to build unified sandbox tool")
+
     for tool_type in tool_types:
+        if tool_type == BUILTIN_TOOL_SANDBOX or tool_type in LEGACY_SANDBOX_TOOL_TYPES:
+            continue
         if tool_type == "scheduled_task_manager":
             if user_id is None:
                 logger.warning("Scheduled task manager tool requires user_id, skipping")
@@ -34,28 +42,6 @@ def build_builtin_tools(
                 tools.extend(build_scheduled_task_tools(user_id, agent_id=agent_id or 0))
             except Exception:
                 logger.exception("Failed to build scheduled_task_manager tools")
-            continue
-
-        if tool_type == "skill_manager":
-            if user_id is None:
-                logger.warning("Skill manager tool requires user_id, skipping")
-                continue
-            try:
-                from app.utils.langchain.builtin_tools.skill_manager_tool import build_skill_manager_tools
-                tools.extend(build_skill_manager_tools(user_id, session_id=session_id))
-            except Exception:
-                logger.exception("Failed to build skill_manager tools")
-            continue
-
-        if tool_type == "workspace_manager":
-            if user_id is None or not session_id:
-                logger.warning("Workspace manager tool requires user_id and session_id, skipping")
-                continue
-            try:
-                from app.utils.langchain.builtin_tools.workspace_tool import build_workspace_tools
-                tools.extend(build_workspace_tools(user_id, session_id))
-            except Exception:
-                logger.exception("Failed to build workspace_manager tools")
             continue
 
         if tool_type == "memory_manager":
@@ -97,23 +83,6 @@ def build_builtin_tools(
                 tools.extend(build_help_document_tools())
             except Exception:
                 logger.exception("Failed to build help_document_manager tools")
-            continue
-
-        if tool_type == "python_exec":
-            try:
-                tools.append(build_python_exec_tool(user_id=user_id, session_id=session_id))
-            except Exception:
-                logger.exception("Failed to build python_exec tool")
-            continue
-
-        if tool_type == "bash_exec":
-            if user_id is None or not session_id:
-                logger.warning("Bash exec tool requires user_id and session_id, skipping")
-                continue
-            try:
-                tools.append(build_bash_exec_tool(user_id=user_id, session_id=session_id))
-            except Exception:
-                logger.exception("Failed to build bash_exec tool")
             continue
 
         builder = _BUILDERS.get(tool_type)

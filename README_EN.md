@@ -46,7 +46,7 @@ Specifically, a few pain points come up when trying to use existing chatbots as 
 - **Streaming chat** — Real-time SSE output with branching message tree support
 - **Human-in-the-loop** — Pause before each tool call and wait for user approval
 - **Session workspace** — Each session has an isolated file sandbox directory. Agents can read and write files (code, data, reports, etc.) and generated files appear in the sidebar in real time with single-file or bulk download support; the code execution sandbox is integrated with the workspace so script outputs land on disk immediately
-- **Image generation studio** — Supports DALL-E, Stability AI, SiliconFlow, and more
+- **Image generation studio** — Supports OpenAI Images, Stability AI, SiliconFlow, and more
 - **File upload & parsing** — Inline PDF, DOCX, TXT, CSV, JSON files directly into messages
 - **Scheduled tasks** — Configure daily/weekly/monthly tasks; results can be sent via email
 - **Email Agent** — Poll a mailbox and route incoming emails to a specified agent
@@ -65,7 +65,7 @@ Besides custom MCP / HTTP API tools, the platform ships a set of ready-to-use to
 | `python_exec` | Run Python in an isolated subprocess sandbox (whitelisted imports, restricted file access) |
 | `workspace` | Read/write the current session's file workspace; outputs appear in the sidebar automatically |
 | `scheduled_task_manager` | Let the agent create/manage scheduled tasks itself |
-| `skill_manager` | Pull skills on demand (SKILL.md + bundled scripts) and run them in the workspace |
+| `bash_exec` | Run commands in the isolated workspace and mounted user Skill directories; Skills are discovered from the filesystem |
 | `memory_manager` | Read/write long-term user memory (core memories are auto-injected into the system prompt) |
 | `prompt_template_manager` | Query reusable prompt templates |
 | `knowledge_graph_manager` | Extract/query knowledge graph nodes and edges |

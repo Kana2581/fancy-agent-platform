@@ -64,22 +64,7 @@ async def lifespan(app: FastAPI):
 
     await init_db()
 
-    # 启动时幂等载入 system skills 种子（找不到文件就跳过）
-    try:
-        import json
-        from pathlib import Path
-        from app.deps.db import get_db_session
-        from app.services.skill_service import SkillService
-        seed_path = Path(__file__).parent / "seed" / "system_skills.json"
-        if seed_path.exists():
-            data = json.loads(seed_path.read_text(encoding="utf-8"))
-            async with get_db_session() as db:
-                svc = SkillService(db)
-                for item in data:
-                    await svc.upsert_system_skill(item)
-            logger.info(f"载入 {len(data)} 条 system skills")
-    except Exception as e:
-        logger.warning(f"system skills 种子载入失败: {e}")
+    logger.info("Skill packages are scanned from filesystem on demand")
 
     await start_scheduler()
 
