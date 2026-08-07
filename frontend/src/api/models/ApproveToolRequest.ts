@@ -5,4 +5,5 @@
 export type ApproveToolRequest = {
   message_id: string
   approved: boolean
+  structured_output_schema_id?: number | null
 }

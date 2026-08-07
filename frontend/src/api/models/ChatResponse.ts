@@ -3,6 +3,7 @@
 /* tslint:disable */
 /* eslint-disable */
 import type { SimpleFile } from './SimpleFile'
+import type { StructuredOutputArtifact } from './StructuredOutputSchema'
 export type ChatResponse = {
   id: string
   content: string | Record<string, any>
@@ -13,4 +14,5 @@ export type ChatResponse = {
   files?: Array<SimpleFile> | null
   usage_metadata?: Record<string, any> | null
   approval_status?: string | null
+  artifact?: StructuredOutputArtifact | null
 }

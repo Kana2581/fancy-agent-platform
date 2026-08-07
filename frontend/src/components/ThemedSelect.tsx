@@ -15,6 +15,7 @@ interface ThemedSelectProps {
   disabled?: boolean
   required?: boolean
   placeholder?: string
+  menuPlacement?: 'down' | 'up'
 }
 
 const ThemedSelect: React.FC<ThemedSelectProps> = ({
@@ -24,6 +25,7 @@ const ThemedSelect: React.FC<ThemedSelectProps> = ({
   className = '',
   disabled = false,
   placeholder,
+  menuPlacement = 'down',
 }) => {
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
@@ -57,7 +59,11 @@ const ThemedSelect: React.FC<ThemedSelectProps> = ({
       </button>
 
       {open && (
-        <div className="absolute z-50 w-full mt-1 bg-white dark:bg-gray-900/95 border border-gray-200 dark:border-zinc-800 rounded-xl overflow-hidden shadow-md">
+        <div
+          className={`absolute z-50 w-full bg-white dark:bg-gray-900/95 border border-gray-200 dark:border-zinc-800 rounded-xl overflow-hidden shadow-md ${
+            menuPlacement === 'up' ? 'bottom-full mb-1' : 'top-full mt-1'
+          }`}
+        >
           {options.map((opt) => (
             <button
               key={opt.value}
