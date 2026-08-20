@@ -1,5 +1,5 @@
-import { useMemo, useState } from 'react'
-import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { ApiError, DefaultService } from '../api'
 import { tokenManager } from '../utils/TokenManager'
 import { setupApiClient } from '../utils/ApiClient'
@@ -23,21 +23,12 @@ const extractErrorMessage = (error: unknown): string => {
   if (error instanceof Error) return error.message
   return '请求失败，请稍后重试'
 }
-type AuthMode = 'login' | 'register'
-
 const AuthPage = () => {
-  const location = useLocation()
   const navigate = useNavigate()
   const { refreshAll } = useAppContext()
-  const mode: AuthMode = useMemo(
-    () => (location.pathname.includes('register') ? 'register' : 'login'),
-    [location.pathname]
-  )
 
   const [username, setUsername] = useState('')
-  const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [confirmPassword, setConfirmPassword] = useState('')
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
   const [loading, setLoading] = useState(false)
@@ -54,21 +45,6 @@ const AuthPage = () => {
     void navigate('/chat', { replace: true })
   }
 
-  const submitRegister = async () => {
-    if (password !== confirmPassword) {
-      throw new Error('两次输入的密码不一致')
-    }
-
-    await DefaultService.registerUserApiV1AuthRegisterPost({
-      username,
-      email,
-      password,
-    })
-
-    setSuccess('注册成功，正在为你自动登录...')
-    await submitLogin()
-  }
-
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     setError('')
@@ -76,11 +52,7 @@ const AuthPage = () => {
 
     try {
       setLoading(true)
-      if (mode === 'login') {
-        await submitLogin()
-      } else {
-        await submitRegister()
-      }
+      await submitLogin()
     } catch (submitError) {
       setError(extractErrorMessage(submitError))
     } finally {
@@ -95,21 +67,10 @@ const AuthPage = () => {
           Fancy Agent
         </p>
         <h1 className="mb-6 text-2xl font-semibold text-gray-900">
-          {mode === 'login' ? '欢迎回来' : '创建账号'}
+          欢迎回来
         </h1>
 
         <form className="space-y-3" onSubmit={handleSubmit}>
-          {mode === 'register' && (
-            <input
-              className="w-full rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-900 placeholder-gray-400 outline-none transition focus:border-gray-500 focus:ring-1 focus:ring-gray-200"
-              placeholder="邮箱"
-              type="email"
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
-              required
-            />
-          )}
-
           <input
             className="w-full rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-900 placeholder-gray-400 outline-none transition focus:border-gray-500 focus:ring-1 focus:ring-gray-200"
             placeholder="用户名"
@@ -127,17 +88,6 @@ const AuthPage = () => {
             required
           />
 
-          {mode === 'register' && (
-            <input
-              className="w-full rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-900 placeholder-gray-400 outline-none transition focus:border-gray-500 focus:ring-1 focus:ring-gray-200"
-              placeholder="确认密码"
-              type="password"
-              value={confirmPassword}
-              onChange={(event) => setConfirmPassword(event.target.value)}
-              required
-            />
-          )}
-
           {error && (
             <p className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600">
               {error}
@@ -154,19 +104,11 @@ const AuthPage = () => {
             type="submit"
             disabled={loading}
           >
-            {loading ? '提交中...' : mode === 'login' ? '登录' : '注册并登录'}
+            {loading ? '提交中...' : '登录'}
           </button>
         </form>
 
-        <p className="mt-5 text-sm text-gray-500">
-          {mode === 'login' ? '还没有账号？' : '已经有账号？'}
-          <Link
-            className="ml-1.5 font-medium text-gray-900 underline underline-offset-2"
-            to={mode === 'login' ? '/register' : '/login'}
-          >
-            {mode === 'login' ? '去注册' : '去登录'}
-          </Link>
-        </p>
+        <p className="mt-5 text-sm text-gray-500">当前不开放自助注册。</p>
       </div>
     </div>
   )

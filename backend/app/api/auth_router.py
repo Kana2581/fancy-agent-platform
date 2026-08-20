@@ -21,6 +21,8 @@ async def register_user(
     user_data: UserCreate,
     user_service: UserService = Depends(get_user_service),
 ):
+    if not settings.REGISTRATION_ENABLED:
+        raise HTTPException(status_code=403, detail="Registration is disabled")
     user = await user_service.register_user(user_data.model_dump())
     return user
 
