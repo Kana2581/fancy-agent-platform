@@ -49,16 +49,28 @@ const ToolCall: React.FC<{ toolCall: ToolCallData }> = ({ toolCall }) => {
 
 export const AIMessage: React.FC<{
   content: string
+  reasoningSummary?: string | null
   toolCalls?: ToolCallData[]
   artifact?: StructuredOutputArtifact | null
 }> = ({
   content,
+  reasoningSummary,
   toolCalls,
   artifact,
 }) => {
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null)
   return (
     <div className="space-y-2">
+      {reasoningSummary && (
+        <details className="rounded-lg border border-gray-200 dark:border-zinc-800 bg-gray-50/70 dark:bg-zinc-900/70">
+          <summary className="cursor-pointer px-3 py-2 text-xs text-gray-500 dark:text-zinc-400 hover:text-gray-600 dark:hover:text-zinc-300">
+            思考过程
+          </summary>
+          <div className="border-t border-gray-200 dark:border-zinc-800 px-3 py-2 whitespace-pre-wrap text-xs leading-relaxed text-gray-500 dark:text-zinc-400">
+            {reasoningSummary}
+          </div>
+        </details>
+      )}
       {lightboxUrl && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/60"
@@ -75,7 +87,7 @@ export const AIMessage: React.FC<{
       )}
       {artifact?.type === 'structured_output' ? (
         <StructuredOutputResult artifact={artifact} />
-      ) : (
+      ) : content ? (
       <div className="prose prose-sm max-w-none prose-invert">
         <ReactMarkdown
           remarkPlugins={[remarkGfm]}
@@ -179,7 +191,7 @@ export const AIMessage: React.FC<{
           {content}
         </ReactMarkdown>
       </div>
-      )}
+      ) : null}
 
       {!artifact && toolCalls && toolCalls.length > 0 && (
         <div className="space-y-2">

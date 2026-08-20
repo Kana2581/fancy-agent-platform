@@ -25,6 +25,12 @@ class LLMService:
     async def update_llm(self, llm_id: int, data: LLMUpdate) -> Optional[LLM]:
         existing = await self.mapper.get_by_id(llm_id)
         update_data = data.model_dump(exclude_unset=True)
+        # The edit form deliberately does not refill stored secrets.  Its blank
+        # API-key field therefore means "keep the existing key", not "erase it".
+        # Without this guard, changing only the protocol clears the credential and
+        # ChatOpenAI later falls back to OPENAI_API_KEY from the process env.
+        if not str(update_data.get("api_key") or "").strip():
+            update_data.pop("api_key", None)
         self._validate_api_mode(
             update_data.get("provider", existing.provider if existing else None),
             update_data.get("api_mode", existing.api_mode if existing else "chat_completions"),

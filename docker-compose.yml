@@ -120,4 +120,7 @@ volumes:
   uploads:
   workspaces:
   skill_packages:
+  # Keep the physical Docker volume stable even if this repository directory
+  # or the Compose project name changes.
   mysql_data:
+    name: fancy_agent_mysql_data

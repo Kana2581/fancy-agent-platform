@@ -4,37 +4,7 @@ import { Bot, AlertTriangle } from 'lucide-react'
 import type { SharedSessionView } from '../api'
 import { SessionSharesService } from '../api'
 import { MessageBubble } from '../components/message'
-
-type SharedContentItem = {
-  type?: string
-  text?: string
-  image_url?: { url?: string } | string
-}
-
-const contentToString = (content: unknown): string => {
-  if (content == null) return ''
-  if (typeof content === 'string') return content
-  if (Array.isArray(content)) {
-    return content
-      .map((raw): string => {
-        if (typeof raw === 'string') return raw
-        const item = raw as SharedContentItem
-        if (item?.type === 'text' && typeof item?.text === 'string') return item.text
-        if (item?.type === 'image_url') {
-          const url = typeof item.image_url === 'string' ? item.image_url : item.image_url?.url
-          return url ? `![image](${url})` : ''
-        }
-        return ''
-      })
-      .filter(Boolean)
-      .join('\n\n')
-  }
-  try {
-    return JSON.stringify(content)
-  } catch {
-    return '[non-serializable]'
-  }
-}
+import { parseResponseContent } from '../utils/responseContent'
 
 const SharedSessionPage: React.FC = () => {
   const { slug } = useParams<{ slug: string }>()
@@ -102,13 +72,17 @@ const SharedSessionPage: React.FC = () => {
           </div>
         ) : (
           <div className="space-y-6">
-            {view?.messages.map((msg) => (
-              <MessageBubble
-                key={msg.id}
-                type={msg.type}
-                content={contentToString(msg.content)}
-              />
-            ))}
+            {view?.messages.map((msg) => {
+              const parsedContent = parseResponseContent(msg.content)
+              return (
+                <MessageBubble
+                  key={msg.id}
+                  type={msg.type}
+                  content={parsedContent.content}
+                  reasoningSummary={parsedContent.reasoningSummary}
+                />
+              )
+            })}
           </div>
         )}
 

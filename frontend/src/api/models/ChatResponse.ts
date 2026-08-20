@@ -4,9 +4,11 @@
 /* eslint-disable */
 import type { SimpleFile } from './SimpleFile'
 import type { StructuredOutputArtifact } from './StructuredOutputSchema'
+import type { ResponseMessageContent } from '../../utils/responseContent'
 export type ChatResponse = {
   id: string
-  content: string | Record<string, any>
+  content: ResponseMessageContent
+  reasoning_summary?: string | null
   type: string
   name?: string | null
   parent_id?: string | null
