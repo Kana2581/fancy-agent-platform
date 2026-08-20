@@ -6,7 +6,11 @@ FROM python:3.12-slim
 WORKDIR /app
 
 COPY sandbox/requirements.txt .
-RUN apt-get update \
+RUN sed -i \
+        -e 's|deb.debian.org/debian-security|mirrors.aliyun.com/debian-security|g' \
+        -e 's|deb.debian.org/debian|mirrors.aliyun.com/debian|g' \
+        /etc/apt/sources.list.d/debian.sources \
+    && apt-get update \
     && apt-get install -y --no-install-recommends bubblewrap bash \
     && rm -rf /var/lib/apt/lists/* \
     && pip install --no-cache-dir -r requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple

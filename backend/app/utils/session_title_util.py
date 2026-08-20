@@ -3,6 +3,7 @@ import re
 from typing import Iterable
 
 from langchain.chat_models import init_chat_model
+from app.utils.langchain.api_mode import model_init_kwargs
 from langchain_core.messages import BaseMessage, HumanMessage
 
 from app.schemas.dto.langchian import ValidAgent, ValidChatModel
@@ -37,7 +38,7 @@ class SessionTitleUtil:
             raise ValueError("没有可用于生成标题的首轮对话内容")
 
         model_config = ValidChatModel.model_validate(agent_data.llm)
-        llm = init_chat_model(**model_config.model_dump())
+        llm = init_chat_model(**model_init_kwargs(model_config))
         response = await llm.ainvoke([
             HumanMessage(
                 content=SessionTitleUtil.PROMPT.format(

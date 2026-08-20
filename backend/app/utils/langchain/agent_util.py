@@ -23,6 +23,7 @@ from app.utils.langchain.middleware import (
     ToolCallInterruptMiddleware,
     ToolExecutionLoggingMiddleware,
 )
+from app.utils.langchain.api_mode import model_init_kwargs
 
 logger = get_logger(__name__)
 
@@ -60,7 +61,7 @@ async def _build_model_and_tools(
 ) -> Tuple[BaseChatModel, List[BaseTool]]:
     """Shared logic for building the LLM model and tool list from agent config."""
     model_config = ValidChatModel.model_validate(agent_data.llm)
-    model_kwargs = model_config.model_dump()
+    model_kwargs = model_init_kwargs(model_config)
     if model_config.model_provider in ("openai", "openai-like"):
         model_kwargs["stream_usage"] = True
     model = init_chat_model(**model_kwargs)

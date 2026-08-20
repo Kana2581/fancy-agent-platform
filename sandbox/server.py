@@ -497,7 +497,9 @@ def _bwrap_command(workdir: Path, meta_dir: Optional[Path] = None,
         "--ro-bind", "/usr", "/usr", "--ro-bind", "/usr/local", "/usr/local",
         "--ro-bind", "/bin", "/bin", "--ro-bind", "/lib", "/lib",
         "--ro-bind", "/lib64", "/lib64", "--ro-bind", "/etc", "/etc",
-        "--proc", "/proc", "--dev", "/dev", "--tmpfs", "/tmp",
+        # A nested proc mount is blocked by this host's non-privileged Docker
+        # policy. The sandbox does not need procfs for code execution.
+        "--dev", "/dev", "--tmpfs", "/tmp",
         "--dir", "/skills", "--bind", str(workdir), "/workspace", "--chdir", "/workspace",
         "--setenv", "PATH", "/usr/local/bin:/usr/bin:/bin",
         "--setenv", "HOME", "/tmp", "--setenv", "PYTHONDONTWRITEBYTECODE", "1",

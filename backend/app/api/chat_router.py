@@ -13,6 +13,7 @@ from langchain_core.messages import message_to_dict, HumanMessage, ToolMessage, 
 from langchain_core.messages.utils import convert_to_openai_messages, messages_from_dict
 from app.utils.langchain.agent_util import get_langchian_agent, get_langchain_agent_and_tools
 from app.utils.langchain.message_processor import MessageProcessor
+from app.utils.langchain.api_mode import adapt_history_for_api_mode, response_is_incomplete
 from langgraph.prebuilt import ToolNode
 from langchain.agents.structured_output import ProviderStrategy
 from uuid import uuid4
@@ -85,6 +86,7 @@ async def _stream_agent_response(
 ) -> AsyncIterator[str]:
     """共享流式循环 + interrupt 处理。"""
     last_ai_msg_id = None
+    incomplete_warning_emitted = False
     async for chunk, parent_message_id in chat_service.chat(
         session_id=session_id,
         user_id=user_id,
@@ -111,6 +113,12 @@ async def _stream_agent_response(
         if artifact:
             chunk_data["data"]["artifact"] = artifact
         yield format_sse(chunk_data)
+        if not incomplete_warning_emitted and response_is_incomplete(chunk):
+            incomplete_warning_emitted = True
+            yield format_sse(
+                {"message_id": chunk_data["data"].get("id"), "message": "模型响应未完整生成，已保留可用的部分内容。"},
+                "warning",
+            )
         if artifact:
             yield format_sse(
                 {
@@ -225,6 +233,11 @@ async def chat_stream(
                     history,
                     user_id=user_id,
                 )
+
+            messages_with_files = adapt_history_for_api_mode(
+                messages_with_files,
+                agent_data.llm.api_mode if agent_data.llm else "chat_completions",
+            )
 
             # 4. 推理
             stream_emitted_done = False
@@ -389,6 +402,10 @@ async def approve_tool(
 
             leaf_id = tool_results[-1].id
             all_messages = history + tool_results
+            all_messages = adapt_history_for_api_mode(
+                all_messages,
+                agent_data.llm.api_mode if agent_data.llm else "chat_completions",
+            )
 
             # Resume streaming from the agent with full history (approved & rejected 都继续让 agent 回复)
             async for sse in _stream_agent_response(

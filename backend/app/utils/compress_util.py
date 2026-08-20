@@ -3,6 +3,7 @@ from typing import AsyncIterator, Optional
 from uuid import uuid4
 
 from langchain.chat_models import init_chat_model
+from app.utils.langchain.api_mode import model_init_kwargs
 from langchain_core.messages import HumanMessage
 
 from app.deps.db import get_db_session
@@ -103,7 +104,7 @@ class CompressUtil:
                 raise ValueError("没有有效的对话内容可压缩")
 
         # 2️⃣ Stream: db session 关闭后再跑 LLM,避免长占连接
-        llm = init_chat_model(**model_config.model_dump())
+        llm = init_chat_model(**model_init_kwargs(model_config))
         msg_id = str(uuid4())
         full_content = ""
 

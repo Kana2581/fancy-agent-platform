@@ -42,6 +42,7 @@ interface UseMessageHandlerReturn {
   editingContent: string
   pendingApproval: PendingApproval | null
   streamError: string | null
+  streamWarning: string | null
   setEditingContent: React.Dispatch<React.SetStateAction<string>>
   handleSendMessage: (
     message: string,
@@ -57,6 +58,7 @@ interface UseMessageHandlerReturn {
   handleSiblingSwitch: (messageId: string, direction: 'prev' | 'next') => void
   getSiblingInfo: (messageId: string) => SiblingInfo | undefined
   clearStreamError: () => void
+  clearStreamWarning: () => void
   stopStream: () => void
 }
 
@@ -114,6 +116,7 @@ export const useMessageHandler = ({
   const [editingContent, setEditingContent] = useState('')
   const [pendingApproval, setPendingApproval] = useState<PendingApproval | null>(null)
   const [streamError, setStreamError] = useState<string | null>(null)
+  const [streamWarning, setStreamWarning] = useState<string | null>(null)
 
   // Ref for latest allMessages accessible inside async stream handlers
   const allMessagesRef = useRef<ChatResponse[]>([])
@@ -140,6 +143,7 @@ export const useMessageHandler = ({
       setIsLoading(false)
       setPendingApproval(null)
       setStreamError(null)
+      setStreamWarning(null)
     }
     prevSessionIdRef.current = sessionId
   }, [sessionId])
@@ -160,6 +164,43 @@ export const useMessageHandler = ({
   function normalizeContent(content: unknown): string {
     if (content === null || content === undefined) return ''
     if (typeof content === 'string') return content
+    if (Array.isArray(content)) {
+      const visible: string[] = []
+      for (const item of content) {
+        if (typeof item === 'string') {
+          visible.push(item)
+          continue
+        }
+        if (!item || typeof item !== 'object') continue
+        const block = item as Record<string, unknown>
+        const rawType = block.type
+        const type = typeof rawType === 'string' ? rawType : ''
+        if (['text', 'output_text', 'input_text'].includes(type)) {
+          const text = block.text ?? block.content
+          if (typeof text === 'string') visible.push(text)
+          const annotations = Array.isArray(block.annotations) ? block.annotations : []
+          for (const annotation of annotations) {
+            if (!annotation || typeof annotation !== 'object') continue
+            const a = annotation as Record<string, unknown>
+            const url = a.url ?? (a.url_citation as Record<string, unknown> | undefined)?.url
+            const title = a.title ?? (a.url_citation as Record<string, unknown> | undefined)?.title ?? url
+            if (typeof url === 'string') visible.push(` [${String(title)}](${url})`)
+          }
+        } else if (['image', 'image_url', 'input_image', 'output_image'].includes(type)) {
+          const candidate = block.image_url ?? block.url
+          const url = typeof candidate === 'string'
+            ? candidate
+            : candidate && typeof candidate === 'object' && typeof (candidate as Record<string, unknown>).url === 'string'
+              ? (candidate as Record<string, unknown>).url as string
+              : null
+          if (url) visible.push(`![图片](${url})`)
+        } else if (['function_call_output', 'tool_result', 'computer_call_output'].includes(type)) {
+          const output = block.output ?? block.content
+          if (typeof output === 'string') visible.push(output)
+        }
+      }
+      return visible.join('')
+    }
     try {
       return JSON.stringify(content, null, 2)
     } catch {
@@ -319,6 +360,11 @@ export const useMessageHandler = ({
         const data = JSON.parse(dataLine) as { message?: string }
         setStreamError(data.message ?? '发生未知错误')
         return true
+      }
+      if (eventType === 'warning') {
+        const data = JSON.parse(dataLine) as { message?: string }
+        setStreamWarning(data.message ?? '模型响应未完整生成，已保留可用内容。')
+        return false
       }
       if (eventType === 'tool_approval_required') {
         const data = JSON.parse(dataLine) as { message_id: string }
@@ -673,6 +719,7 @@ export const useMessageHandler = ({
   // ─────────────────────────────────────────────────────────────────────────
 
   const clearStreamError = useCallback(() => setStreamError(null), [])
+  const clearStreamWarning = useCallback(() => setStreamWarning(null), [])
 
   return {
     displayMessages,
@@ -682,6 +729,7 @@ export const useMessageHandler = ({
     editingContent,
     pendingApproval,
     streamError,
+    streamWarning,
     setEditingContent,
     handleSendMessage,
     handleApproveTools,
@@ -693,6 +741,7 @@ export const useMessageHandler = ({
     handleSiblingSwitch,
     getSiblingInfo,
     clearStreamError,
+    clearStreamWarning,
     stopStream,
   }
 }

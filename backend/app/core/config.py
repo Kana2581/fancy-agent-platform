@@ -57,6 +57,9 @@ class Settings:
         self.REFRESH_TOKEN_EXPIRE = timedelta(days=365)
 
         self.REFRESH_COOKIE_NAME = "refresh_token"
+        # Public deployments can disable self-service account creation while
+        # retaining login for existing users.
+        self.REGISTRATION_ENABLED: bool = os.getenv("REGISTRATION_ENABLED", "true").lower() == "true"
 
         # 邮件服务配置
         self.EMAIL_ENABLED: bool = os.getenv("EMAIL_ENABLED", "false").lower() == "true"

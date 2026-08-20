@@ -83,6 +83,10 @@ services:
     # seccomp profile blocks unshare(2), so the runtime must be allowed to create them.
     security_opt:
       - seccomp:unconfined
+    # Bubblewrap needs mount-namespace operations, but the container itself
+    # stays non-privileged and has no Docker socket or host-path mounts.
+    cap_add:
+      - SYS_ADMIN
     expose:
       - "9000"                            # 仅 compose 内网，不对外暴露端口
     healthcheck:
