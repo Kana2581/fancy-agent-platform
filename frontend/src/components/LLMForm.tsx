@@ -8,6 +8,7 @@ interface LLMFormData {
   model_name: string
   base_url: string
   api_key: string
+  api_mode: 'chat_completions' | 'responses'
 }
 
 interface LLMFormProps {
@@ -43,6 +44,7 @@ const LLMForm: React.FC<LLMFormProps> = ({
         base_url: form.base_url || null,
         api_key: form.api_key || null,
         llm_id: editingId ?? null,
+        api_mode: form.api_mode,
       })
       setTestResult(res)
     } catch (e) {
@@ -73,6 +75,22 @@ const LLMForm: React.FC<LLMFormProps> = ({
           className="w-full px-4 py-3 bg-white dark:bg-zinc-800 border border-gray-300 dark:border-zinc-700 rounded-2xl focus:ring-1 focus:ring-gray-300 dark:focus:ring-zinc-600 focus:border-gray-500 dark:focus:border-zinc-400 outline-none transition-all text-gray-800 dark:text-white"
         />
       </div>
+
+      {form.provider.toLowerCase() === 'openai' && (
+        <div>
+          <label className="block text-sm font-medium text-gray-800 mb-2">API 协议</label>
+          <ThemedSelect
+            value={form.api_mode}
+            onChange={(v) => onChange({ ...form, api_mode: v as LLMFormData['api_mode'] })}
+            options={[
+              { value: 'chat_completions', label: 'Chat Completions（兼容模式）' },
+              { value: 'responses', label: 'Responses API' },
+            ]}
+            className="w-full px-4 py-3 bg-white dark:bg-zinc-800 border border-gray-300 dark:border-zinc-700 rounded-2xl focus:ring-1 focus:ring-gray-300 dark:focus:ring-zinc-600 focus:border-gray-500 dark:focus:border-zinc-400 outline-none transition-all text-gray-800 dark:text-white"
+          />
+          <p className="text-xs text-gray-600 mt-2">Responses 会保留原始输出项和元数据；其他提供商使用原有聊天协议。</p>
+        </div>
+      )}
 
       <div>
         <label className="block text-sm font-medium text-gray-800 mb-2">模型名称 *</label>

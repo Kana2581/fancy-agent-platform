@@ -46,5 +46,8 @@ class LLM(Base,TimestampMixin):
         nullable=True,
         comment="API Key（落库加密）"
     )
+    # OpenAI-compatible endpoints may use either /chat/completions or /responses.
+    # Keep the default at the database level so existing rows retain legacy behavior.
+    api_mode = Column(String(32), nullable=False, default="chat_completions", server_default="chat_completions")
     agents = relationship("Agent", back_populates="llm")  # 反向关联
 

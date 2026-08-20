@@ -31,11 +31,18 @@ const SettingsPage: React.FC = () => {
   const [editingLLMItem, setEditingLLMItem] = useState<(typeof llmModels)[0] | null>(null)
   const [editingMCPItem, setEditingMCPItem] = useState<(typeof mcpTools)[0] | null>(null)
 
-  const [llmForm, setLLMForm] = useState({
+  const [llmForm, setLLMForm] = useState<{
+    provider: string
+    model_name: string
+    base_url: string
+    api_key: string
+    api_mode: 'chat_completions' | 'responses'
+  }>({
     provider: 'OpenAI',
     model_name: '',
     base_url: '',
     api_key: '',
+    api_mode: 'chat_completions',
   })
 
   const [mcpForm, setMCPForm] = useState({
@@ -56,6 +63,7 @@ const SettingsPage: React.FC = () => {
         model_name: llm.model_name,
         base_url: llm.base_url || '',
         api_key: '',
+        api_mode: llm.api_mode ?? 'chat_completions',
       })
     } else {
       setEditingLLMItem(null)
@@ -64,6 +72,7 @@ const SettingsPage: React.FC = () => {
         model_name: '',
         base_url: '',
         api_key: '',
+        api_mode: 'chat_completions',
       })
     }
     setShowLLMModal(true)

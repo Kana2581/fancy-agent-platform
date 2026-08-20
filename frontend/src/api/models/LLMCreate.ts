@@ -7,4 +7,5 @@ export type LLMCreate = {
   model_name: string
   base_url?: string | null
   api_key?: string | null
+  api_mode?: 'chat_completions' | 'responses'
 }

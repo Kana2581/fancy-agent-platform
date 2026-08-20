@@ -154,6 +154,7 @@ const ChatPage: React.FC = () => {
     editingContent,
     pendingApproval,
     streamError,
+    streamWarning,
     setEditingContent,
     handleSendMessage,
     handleApproveTools,
@@ -165,6 +166,7 @@ const ChatPage: React.FC = () => {
     handleSiblingSwitch,
     getSiblingInfo,
     clearStreamError,
+    clearStreamWarning,
     stopStream,
   } = useMessageHandler({ sessionId, structuredOutputSchemaId })
 
@@ -796,6 +798,15 @@ const ChatPage: React.FC = () => {
                   onClick={clearStreamError}
                   className="p-1 hover:bg-red-400/20 rounded-lg transition-colors"
                 >
+                  <X size={14} />
+                </button>
+              </div>
+            )}
+            {streamWarning && (
+              <div className="mb-3 flex items-center gap-3 px-4 py-2.5 bg-amber-500/15 rounded-2xl border border-amber-400/30 text-amber-700 dark:text-amber-300">
+                <AlertCircle size={16} className="flex-shrink-0" />
+                <span className="text-sm flex-1">{streamWarning}</span>
+                <button onClick={clearStreamWarning} className="p-1 hover:bg-amber-400/20 rounded-lg transition-colors">
                   <X size={14} />
                 </button>
               </div>

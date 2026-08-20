@@ -146,6 +146,7 @@ class AgentMapper(BaseMapper[Agent]):
                 "model_name": llm.model_name,
                 "base_url": llm.base_url,
                 "api_key": llm.api_key,
+                "api_mode": llm.api_mode or "chat_completions",
                 "created_at": llm.created_at,
                 "updated_at": llm.updated_at,
                 "user_id": llm.user_id,

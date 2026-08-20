@@ -6,6 +6,7 @@
 from typing import List, Optional
 
 from langchain.chat_models import init_chat_model
+from app.utils.langchain.api_mode import model_init_kwargs
 from langchain_core.messages import HumanMessage, SystemMessage
 from pydantic import BaseModel, Field
 
@@ -55,7 +56,7 @@ async def extract_kg_from_text(text: str, llm_config: dict) -> "_KGExtractResult
     返回 _KGExtractResult（nodes + edges，仅用于预览或存储）
     """
     model_config = ValidChatModel.model_validate(llm_config)
-    llm = init_chat_model(**model_config.model_dump())
+    llm = init_chat_model(**model_init_kwargs(model_config))
     structured_llm = llm.with_structured_output(_KGExtractResult, method="json_mode")
     messages = [
         SystemMessage(content=EXTRACT_SYSTEM_PROMPT),

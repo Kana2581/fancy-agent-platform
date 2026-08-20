@@ -1,5 +1,5 @@
 #!/bin/bash
-set -e
+set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
@@ -11,7 +11,13 @@ log() {
 # ── 1. 拉取最新代码 ──────────────────────────────────────────────────────────
 log "拉取最新代码..."
 git fetch origin
-git reset --hard origin/main
+DEFAULT_BRANCH="$(git symbolic-ref --quiet --short refs/remotes/origin/HEAD 2>/dev/null || true)"
+if [ -z "$DEFAULT_BRANCH" ]; then
+    echo "错误: 无法确定 origin 的默认分支" >&2
+    exit 1
+fi
+log "切换到远端默认分支: $DEFAULT_BRANCH"
+git reset --hard "$DEFAULT_BRANCH"
 
 # ── 2. 从集中配置渲染各环境变量文件 ──────────────────────────────────────────
 log "渲染配置（deploy.config → 前后端 .env）..."

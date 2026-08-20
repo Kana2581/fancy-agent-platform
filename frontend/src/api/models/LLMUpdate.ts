@@ -7,4 +7,5 @@ export type LLMUpdate = {
   model_name?: string | null
   base_url?: string | null
   api_key?: string | null
+  api_mode?: 'chat_completions' | 'responses' | null
 }
