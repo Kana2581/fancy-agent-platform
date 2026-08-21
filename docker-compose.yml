@@ -2,9 +2,6 @@
 
 services:
   db:
-    # Optional development database. Production deployments use the external
-    # DATABASE_URL from backend/.env and do not enable this profile.
-    profiles: ["local-db"]
     image: mysql:8.0
     container_name: mysql_db
     restart: always
@@ -123,4 +120,4 @@ volumes:
   # Keep the physical Docker volume stable even if this repository directory
   # or the Compose project name changes.
   mysql_data:
-    name: fancy_agent_mysql_data
+    name: fancy_agent_platform_mysql_data
