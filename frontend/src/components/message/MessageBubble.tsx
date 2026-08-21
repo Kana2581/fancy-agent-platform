@@ -11,6 +11,7 @@ import type { ToolCallData, UsageMetadata } from './types'
 export const MessageBubble: React.FC<{
   type: string
   content: string
+  reasoningSummary?: string | null
   files?: SimpleFile[]
   toolCalls?: ToolCallData[]
   artifact?: StructuredOutputArtifact | null
@@ -29,6 +30,7 @@ export const MessageBubble: React.FC<{
 }> = ({
   type,
   content,
+  reasoningSummary,
   files,
   toolCalls,
   artifact,
@@ -74,7 +76,7 @@ export const MessageBubble: React.FC<{
           } rounded-xl px-5 py-4`}
         >
           {type === 'ai' && (
-            <AIMessage content={content} toolCalls={toolCalls} artifact={artifact} />
+            <AIMessage content={content} reasoningSummary={reasoningSummary} toolCalls={toolCalls} artifact={artifact} />
           )}
           {type === 'human' && (
             <HumanMessage

@@ -15,6 +15,7 @@ from app.core.logging_config import get_logger
 from contextlib import nullcontext
 from app.core.config import settings
 from app.utils.mlflow_tracer import chat_tracing_context
+from app.utils.langchain.api_mode import visible_content
 logger=get_logger(__name__)
 class ChatService:
     """
@@ -72,6 +73,12 @@ class ChatService:
 
         parent_id = leaf_message_id
         now_id = None
+        # Responses API only assigns the response ID to its initial metadata
+        # chunk. Subsequent text chunks have no ID, so LangGraph assigns each a
+        # fresh UUID before they reach us. Keep one ID for the entire model turn
+        # so the client can update a single assistant bubble and the final model
+        # result replaces its streamed content rather than becoming a duplicate.
+        active_stream_message_id: Optional[str] = None
 
         processor = MessageProcessor(
             session_id=session_id,
@@ -108,6 +115,19 @@ class ChatService:
                         msg, meta = chunk
 
                         if not isinstance(msg, ToolMessage) and msg.id != "__remove_all__":
+                            if isinstance(msg, AIMessageChunk):
+                                if active_stream_message_id is None:
+                                    active_stream_message_id = msg.id
+                                if active_stream_message_id:
+                                    msg.id = active_stream_message_id
+
+                                # Responses also streams created/reasoning and
+                                # other internal blocks. They establish the
+                                # stable ID above but should not create empty
+                                # user-visible chat nodes.
+                                if not visible_content(msg.content):
+                                    continue
+
                             # 当检测到新消息 ID 时（上一条已结束、进入下一条），
                             # 及时更新 parent_id，避免 AIMessageChunk 携带错误的父节点。
 
@@ -128,6 +148,7 @@ class ChatService:
                     elif update_type == "updates":
 
                         if "tools" in chunk:
+                            active_stream_message_id = None
                             res = chunk["tools"]["messages"][-1]
                             if (
                                 structured_output_context
@@ -169,6 +190,8 @@ class ChatService:
                                     if getattr(res, "id", None):
                                         chunk_buffer.pop(res.id, None)
                                     continue
+                            if active_stream_message_id and isinstance(res, AIMessage):
+                                res.id = active_stream_message_id
                             update_parent(res)
                             # 模型完整产出，对应 chunk 缓存作废
                             if getattr(res, "id", None):
@@ -204,6 +227,7 @@ class ChatService:
                                         processor.add(internal_message)
                             logger.info(f"{res}")
                             yield res, parent_id
+                            active_stream_message_id = None
 
                         elif "__interrupt__" in chunk:
                             # Human-in-the-loop：立刻持久化已产出消息，确保 router 随后写

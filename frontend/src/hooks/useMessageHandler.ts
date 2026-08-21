@@ -5,6 +5,7 @@ import { ChatService } from '../api'
 import { useAppContext } from '../context/AppContext'
 import { handleUnauthorized } from '../utils/ApiClient'
 import { tokenManager } from '../utils/TokenManager'
+import { parseResponseContent } from '../utils/responseContent'
 
 function getStreamBaseUrl(): string {
   const raw = import.meta.env.VITE_API_BASE ?? 'http://localhost:8000'
@@ -161,53 +162,6 @@ export const useMessageHandler = ({
 
   // ── 工具 ──────────────────────────────────────────────────────────────────
 
-  function normalizeContent(content: unknown): string {
-    if (content === null || content === undefined) return ''
-    if (typeof content === 'string') return content
-    if (Array.isArray(content)) {
-      const visible: string[] = []
-      for (const item of content) {
-        if (typeof item === 'string') {
-          visible.push(item)
-          continue
-        }
-        if (!item || typeof item !== 'object') continue
-        const block = item as Record<string, unknown>
-        const rawType = block.type
-        const type = typeof rawType === 'string' ? rawType : ''
-        if (['text', 'output_text', 'input_text'].includes(type)) {
-          const text = block.text ?? block.content
-          if (typeof text === 'string') visible.push(text)
-          const annotations = Array.isArray(block.annotations) ? block.annotations : []
-          for (const annotation of annotations) {
-            if (!annotation || typeof annotation !== 'object') continue
-            const a = annotation as Record<string, unknown>
-            const url = a.url ?? (a.url_citation as Record<string, unknown> | undefined)?.url
-            const title = a.title ?? (a.url_citation as Record<string, unknown> | undefined)?.title ?? url
-            if (typeof url === 'string') visible.push(` [${String(title)}](${url})`)
-          }
-        } else if (['image', 'image_url', 'input_image', 'output_image'].includes(type)) {
-          const candidate = block.image_url ?? block.url
-          const url = typeof candidate === 'string'
-            ? candidate
-            : candidate && typeof candidate === 'object' && typeof (candidate as Record<string, unknown>).url === 'string'
-              ? (candidate as Record<string, unknown>).url as string
-              : null
-          if (url) visible.push(`![图片](${url})`)
-        } else if (['function_call_output', 'tool_result', 'computer_call_output'].includes(type)) {
-          const output = block.output ?? block.content
-          if (typeof output === 'string') visible.push(output)
-        }
-      }
-      return visible.join('')
-    }
-    try {
-      return JSON.stringify(content, null, 2)
-    } catch {
-      return '[non-serializable]'
-    }
-  }
-
   /** 获取某条消息的兄弟导航信息（仅当兄弟数 > 1 时返回） */
   const getSiblingInfo = useCallback(
     (messageId: string): SiblingInfo | undefined => {
@@ -234,27 +188,32 @@ export const useMessageHandler = ({
     usageMetadata?: Record<string, unknown> | null,
     artifact?: ChatResponse['artifact']
   ) {
-    const content = normalizeContent(rawContent)
+    const parsedContent = parseResponseContent(rawContent)
+    const content = parsedContent.content
+    const reasoningSummary = parsedContent.reasoningSummary
 
     setAllMessages((prev) => {
       const index = prev.findIndex((m) => m.id === chunkId)
 
       // 流式 AI chunk：追加内容到已有节点，或新建节点
       if (type === 'AIMessageChunk') {
-        if (!content && !usageMetadata) return prev
+        if (!content && !reasoningSummary && !usageMetadata) return prev
 
         if (index !== -1) {
           const updated = [...prev]
           updated[index] = {
             ...updated[index],
             ...(content && { content: (updated[index].content as string) + content }),
+            ...(reasoningSummary && {
+              reasoning_summary: `${updated[index].reasoning_summary ?? ''}${reasoningSummary}`,
+            }),
             ...(usageMetadata && { usage_metadata: usageMetadata }),
             ...(artifact && { artifact }),
           }
           return updated
         }
 
-        if (!content) return prev
+        if (!content && !reasoningSummary) return prev
 
         return [
           ...prev,
@@ -262,6 +221,7 @@ export const useMessageHandler = ({
             id: chunkId,
             type: 'ai' as const,
             content,
+            ...(reasoningSummary && { reasoning_summary: reasoningSummary }),
             // parent 为全量列表最后一条（流式场景下即当前激活末尾的 human 消息）
             parent_id: parentId,
             tool_calls: toolCalls,
@@ -277,6 +237,7 @@ export const useMessageHandler = ({
           updated[index] = {
             ...updated[index],
             content,
+            ...(reasoningSummary && { reasoning_summary: reasoningSummary }),
             // 用完整消息的 parent_id 修正流式 chunk 阶段可能写入的错误 parent_id
             ...(parentId !== undefined && { parent_id: parentId }),
             tool_calls: toolCalls ?? updated[index].tool_calls ?? [],
@@ -292,6 +253,7 @@ export const useMessageHandler = ({
             id: chunkId,
             type: type,
             content,
+            ...(reasoningSummary && { reasoning_summary: reasoningSummary }),
             parent_id: parentId ?? prev[prev.length - 1]?.id ?? null,
             tool_calls: toolCalls,
             ...(usageMetadata !== undefined && { usage_metadata: usageMetadata }),
@@ -448,17 +410,21 @@ export const useMessageHandler = ({
 
     ChatService.getSessionMessagesApiV1ChatSessionIdMessagesGet(sessionId)
       .then((res) => {
-        const normalized: ChatResponse[] = res.map((msg) => ({
-          id: msg.id,
-          type: msg.type,
-          content: normalizeContent(msg.content),
-          parent_id: msg.parent_id ?? null,
-          tool_calls: msg.tool_calls,
-          files: msg.files,
-          approval_status: msg.approval_status ?? null,
-          usage_metadata: msg.usage_metadata ?? null,
-          artifact: msg.artifact ?? null,
-        }))
+        const normalized: ChatResponse[] = res.map((msg) => {
+          const parsedContent = parseResponseContent(msg.content)
+          return {
+            id: msg.id,
+            type: msg.type,
+            content: parsedContent.content,
+            reasoning_summary: parsedContent.reasoningSummary,
+            parent_id: msg.parent_id ?? null,
+            tool_calls: msg.tool_calls,
+            files: msg.files,
+            approval_status: msg.approval_status ?? null,
+            usage_metadata: msg.usage_metadata ?? null,
+            artifact: msg.artifact ?? null,
+          }
+        })
 
         setAllMessages(normalized)
 

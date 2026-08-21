@@ -55,6 +55,22 @@ class TestLLMServiceCrud:
         fetched = await service.get_llm(llm.id)
         assert fetched.provider == "anthropic"
 
+    async def test_update_with_blank_api_key_preserves_existing_secret(self, async_session: AsyncSession):
+        service = LLMService(async_session)
+        llm = await service.create_llm(_make_data(api_key="sk-existing-secret"))
+
+        updated = await service.update_llm(
+            llm.id,
+            LLMUpdate(api_mode="responses", api_key=""),
+        )
+
+        assert updated is not None
+        assert updated.api_mode == "responses"
+        async_session.expunge_all()
+        fetched = await service.get_llm(llm.id)
+        assert fetched is not None
+        assert fetched.api_key == "sk-existing-secret"
+
     async def test_delete(self, async_session: AsyncSession):
         service = LLMService(async_session)
         llm = await service.create_llm(_make_data())

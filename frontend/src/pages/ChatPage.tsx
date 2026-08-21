@@ -663,6 +663,7 @@ const ChatPage: React.FC = () => {
                     content={
                       typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content)
                     }
+                    reasoningSummary={msg.reasoning_summary}
                     files={msg.files ?? undefined}
                     toolCalls={msg.tool_calls ?? undefined}
                     artifact={msg.artifact ?? undefined}
