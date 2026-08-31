@@ -13,7 +13,9 @@ from langchain_core.messages import message_to_dict, HumanMessage, ToolMessage, 
 from langchain_core.messages.utils import convert_to_openai_messages, messages_from_dict
 from app.utils.langchain.agent_util import get_langchian_agent, get_langchain_agent_and_tools
 from app.utils.langchain.message_processor import MessageProcessor
+from app.utils.langchain.api_mode import adapt_history_for_api_mode, response_is_incomplete
 from langgraph.prebuilt import ToolNode
+from langchain.agents.structured_output import ProviderStrategy
 from uuid import uuid4
 from app.mappers.message_approval_mapper import MessageApprovalMapper
 from app.utils.session_title_util import SessionTitleUtil
@@ -27,6 +29,8 @@ from app.deps.service import get_chat_message_service, get_chat_file_service, ge
 from app.services.chat_message_service import ChatMessageService
 
 from app.core.logging_config import get_logger
+from app.services.structured_output_schema_service import StructuredOutputSchemaService
+from app.utils.structured_output import compile_json_schema
 
 logger = get_logger(__name__)
 router = APIRouter(prefix="/chat", tags=["chat"])
@@ -43,6 +47,32 @@ def format_error_sse(code: str, message: str) -> str:
     return format_sse({"code": code, "message": message}, "error")
 
 
+async def _load_structured_output(
+    db,
+    schema_id: int | None,
+    user_id: int,
+) -> tuple[ProviderStrategy | None, dict | None]:
+    if schema_id is None:
+        return None, None
+    schema = await StructuredOutputSchemaService(db).get_for_user(schema_id, user_id)
+    if not schema:
+        raise ValueError("结构化输出 Schema 不存在或无访问权限")
+    field_config = schema.field_config
+    schema_json = compile_json_schema(
+        field_config,
+        name=schema.name,
+        description=schema.description,
+    )
+    return (
+        ProviderStrategy(schema_json),
+        {
+            "schema_id": schema.id,
+            "schema_name": schema.name,
+            "schema_snapshot": field_config,
+        },
+    )
+
+
 async def _stream_agent_response(
     chat_service: ChatService,
     *,
@@ -52,15 +82,18 @@ async def _stream_agent_response(
     messages,
     leaf_message_id: str | None,
     emit_done: bool = True,
+    structured_output_context: dict | None = None,
 ) -> AsyncIterator[str]:
     """共享流式循环 + interrupt 处理。"""
     last_ai_msg_id = None
+    incomplete_warning_emitted = False
     async for chunk, parent_message_id in chat_service.chat(
         session_id=session_id,
         user_id=user_id,
         agent=agent,
         messages=messages,
         leaf_message_id=leaf_message_id,
+        structured_output_context=structured_output_context,
     ):
         if chunk is None and parent_message_id == "__interrupt__":
             if not last_ai_msg_id:
@@ -76,7 +109,26 @@ async def _stream_agent_response(
         chunk_data["data"]["parent_id"] = parent_message_id
         if chunk_data.get("type") in ("ai", "AIMessageChunk"):
             last_ai_msg_id = chunk_data.get("data", {}).get("id")
+        artifact = getattr(chunk, "additional_kwargs", {}).get("artifact")
+        if artifact:
+            chunk_data["data"]["artifact"] = artifact
         yield format_sse(chunk_data)
+        if not incomplete_warning_emitted and response_is_incomplete(chunk):
+            incomplete_warning_emitted = True
+            yield format_sse(
+                {"message_id": chunk_data["data"].get("id"), "message": "模型响应未完整生成，已保留可用的部分内容。"},
+                "warning",
+            )
+        if artifact:
+            yield format_sse(
+                {
+                    "message_id": chunk_data["data"]["id"],
+                    "schema_id": artifact["schema_id"],
+                    "data": artifact["data"],
+                    "artifact": artifact,
+                },
+                "structured_output",
+            )
 
     if emit_done:
         yield "event: done\ndata: {}\n\n"
@@ -117,9 +169,18 @@ async def chat_stream(
 
                 # 3️⃣ 获取 agent 数据
                 data_dict = await agent_service.get_full_agent(agent_id, user_id)
+                response_format, structured_output_context = await _load_structured_output(
+                    db,
+                    body.structured_output_schema_id,
+                    user_id,
+                )
 
             agent_data = ValidAgent.model_validate(data_dict)
-            agent_state = await get_langchian_agent(agent_data, session_id=session_id)
+            agent_state = await get_langchian_agent(
+                agent_data,
+                session_id=session_id,
+                response_format=response_format,
+            )
             should_auto_title = False
 
             if body.content and body.id:
@@ -173,6 +234,11 @@ async def chat_stream(
                     user_id=user_id,
                 )
 
+            messages_with_files = adapt_history_for_api_mode(
+                messages_with_files,
+                agent_data.llm.api_mode if agent_data.llm else "chat_completions",
+            )
+
             # 4. 推理
             stream_emitted_done = False
             stream_needs_approval = False
@@ -184,6 +250,7 @@ async def chat_stream(
                 messages=messages_with_files,
                 leaf_message_id=body.id or body.parent_id,
                 emit_done=False,
+                structured_output_context=structured_output_context,
             ):
                 if sse.startswith("event: done"):
                     stream_emitted_done = True
@@ -247,6 +314,11 @@ async def approve_tool(
                     return
 
                 data_dict = await agent_service.get_full_agent(session.agent_id, user_id)
+                response_format, structured_output_context = await _load_structured_output(
+                    db,
+                    body.structured_output_schema_id,
+                    user_id,
+                )
 
             agent_data = ValidAgent.model_validate(data_dict)
 
@@ -276,7 +348,11 @@ async def approve_tool(
                 return
 
             # Build agent + tools
-            agent, tools = await get_langchain_agent_and_tools(agent_data, session_id=session_id)
+            agent, tools = await get_langchain_agent_and_tools(
+                agent_data,
+                session_id=session_id,
+                response_format=response_format,
+            )
 
             if body.approved:
                 # Execute all pending tool calls
@@ -326,6 +402,10 @@ async def approve_tool(
 
             leaf_id = tool_results[-1].id
             all_messages = history + tool_results
+            all_messages = adapt_history_for_api_mode(
+                all_messages,
+                agent_data.llm.api_mode if agent_data.llm else "chat_completions",
+            )
 
             # Resume streaming from the agent with full history (approved & rejected 都继续让 agent 回复)
             async for sse in _stream_agent_response(
@@ -335,6 +415,7 @@ async def approve_tool(
                 agent=agent,
                 messages=all_messages,
                 leaf_message_id=leaf_id,
+                structured_output_context=structured_output_context,
             ):
                 yield sse
 

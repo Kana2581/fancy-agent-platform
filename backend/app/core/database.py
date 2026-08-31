@@ -65,6 +65,7 @@ async def init_db():
         from app.models.telegram_conversation import TelegramConversation  # noqa: F401
         from app.models.session_share import SessionShare  # noqa: F401
         from app.models.refresh_token import RefreshToken  # noqa: F401
+        from app.models.structured_output_schema import StructuredOutputSchema  # noqa: F401
         await conn.run_sync(Base.metadata.create_all)
         await _ensure_runtime_schema(conn)
 

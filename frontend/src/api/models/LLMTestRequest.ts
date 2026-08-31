@@ -8,4 +8,5 @@ export type LLMTestRequest = {
   base_url?: string | null
   api_key?: string | null
   llm_id?: number | null
+  api_mode?: 'chat_completions' | 'responses'
 }

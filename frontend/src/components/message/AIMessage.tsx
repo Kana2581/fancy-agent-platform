@@ -5,6 +5,8 @@ import remarkGfm from 'remark-gfm'
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
 import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism'
 import type { ToolCallData } from './types'
+import type { StructuredOutputArtifact } from '../../api'
+import { StructuredOutputResult } from './StructuredOutputResult'
 
 function getToolCallKey(toolCall: ToolCallData, idx: number): string {
   if (typeof toolCall.id === 'string' && toolCall.id) return toolCall.id
@@ -45,9 +47,14 @@ const ToolCall: React.FC<{ toolCall: ToolCallData }> = ({ toolCall }) => {
   )
 }
 
-export const AIMessage: React.FC<{ content: string; toolCalls?: ToolCallData[] }> = ({
+export const AIMessage: React.FC<{
+  content: string
+  toolCalls?: ToolCallData[]
+  artifact?: StructuredOutputArtifact | null
+}> = ({
   content,
   toolCalls,
+  artifact,
 }) => {
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null)
   return (
@@ -66,6 +73,9 @@ export const AIMessage: React.FC<{ content: string; toolCalls?: ToolCallData[] }
           </div>
         </div>
       )}
+      {artifact?.type === 'structured_output' ? (
+        <StructuredOutputResult artifact={artifact} />
+      ) : (
       <div className="prose prose-sm max-w-none prose-invert">
         <ReactMarkdown
           remarkPlugins={[remarkGfm]}
@@ -169,8 +179,9 @@ export const AIMessage: React.FC<{ content: string; toolCalls?: ToolCallData[] }
           {content}
         </ReactMarkdown>
       </div>
+      )}
 
-      {toolCalls && toolCalls.length > 0 && (
+      {!artifact && toolCalls && toolCalls.length > 0 && (
         <div className="space-y-2">
           {toolCalls.map((toolCall, idx) => (
             <ToolCall key={getToolCallKey(toolCall, idx)} toolCall={toolCall} />

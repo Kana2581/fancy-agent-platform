@@ -1,4 +1,4 @@
-from typing import Any, Optional
+from typing import Any, Literal, Optional
 
 from pydantic import BaseModel, Field, model_validator
 from typing import List
@@ -26,6 +26,7 @@ class ValidChatModel(BaseModel):
     model: str = Field(...,alias="model_name",description="model name")
     base_url: Optional[str] = None
     api_key: Optional[str] = None
+    api_mode: Literal["chat_completions", "responses"] = "chat_completions"
 
     # v2 风格的 pre 验证器，用于把空字符串转换为 None
     @model_validator(mode='before')

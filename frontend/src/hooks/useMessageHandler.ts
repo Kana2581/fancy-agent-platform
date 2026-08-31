@@ -13,6 +13,7 @@ function getStreamBaseUrl(): string {
 
 interface UseMessageHandlerProps {
   sessionId: string | undefined
+  structuredOutputSchemaId?: number | null
 }
 
 export interface SiblingInfo {
@@ -41,6 +42,7 @@ interface UseMessageHandlerReturn {
   editingContent: string
   pendingApproval: PendingApproval | null
   streamError: string | null
+  streamWarning: string | null
   setEditingContent: React.Dispatch<React.SetStateAction<string>>
   handleSendMessage: (
     message: string,
@@ -56,6 +58,7 @@ interface UseMessageHandlerReturn {
   handleSiblingSwitch: (messageId: string, direction: 'prev' | 'next') => void
   getSiblingInfo: (messageId: string) => SiblingInfo | undefined
   clearStreamError: () => void
+  clearStreamWarning: () => void
   stopStream: () => void
 }
 
@@ -98,6 +101,7 @@ function getDefaultSubPath(
 
 export const useMessageHandler = ({
   sessionId,
+  structuredOutputSchemaId = null,
 }: UseMessageHandlerProps): UseMessageHandlerReturn => {
   const { refreshSessions } = useAppContext()
 
@@ -112,6 +116,7 @@ export const useMessageHandler = ({
   const [editingContent, setEditingContent] = useState('')
   const [pendingApproval, setPendingApproval] = useState<PendingApproval | null>(null)
   const [streamError, setStreamError] = useState<string | null>(null)
+  const [streamWarning, setStreamWarning] = useState<string | null>(null)
 
   // Ref for latest allMessages accessible inside async stream handlers
   const allMessagesRef = useRef<ChatResponse[]>([])
@@ -138,6 +143,7 @@ export const useMessageHandler = ({
       setIsLoading(false)
       setPendingApproval(null)
       setStreamError(null)
+      setStreamWarning(null)
     }
     prevSessionIdRef.current = sessionId
   }, [sessionId])
@@ -158,6 +164,43 @@ export const useMessageHandler = ({
   function normalizeContent(content: unknown): string {
     if (content === null || content === undefined) return ''
     if (typeof content === 'string') return content
+    if (Array.isArray(content)) {
+      const visible: string[] = []
+      for (const item of content) {
+        if (typeof item === 'string') {
+          visible.push(item)
+          continue
+        }
+        if (!item || typeof item !== 'object') continue
+        const block = item as Record<string, unknown>
+        const rawType = block.type
+        const type = typeof rawType === 'string' ? rawType : ''
+        if (['text', 'output_text', 'input_text'].includes(type)) {
+          const text = block.text ?? block.content
+          if (typeof text === 'string') visible.push(text)
+          const annotations = Array.isArray(block.annotations) ? block.annotations : []
+          for (const annotation of annotations) {
+            if (!annotation || typeof annotation !== 'object') continue
+            const a = annotation as Record<string, unknown>
+            const url = a.url ?? (a.url_citation as Record<string, unknown> | undefined)?.url
+            const title = a.title ?? (a.url_citation as Record<string, unknown> | undefined)?.title ?? url
+            if (typeof url === 'string') visible.push(` [${String(title)}](${url})`)
+          }
+        } else if (['image', 'image_url', 'input_image', 'output_image'].includes(type)) {
+          const candidate = block.image_url ?? block.url
+          const url = typeof candidate === 'string'
+            ? candidate
+            : candidate && typeof candidate === 'object' && typeof (candidate as Record<string, unknown>).url === 'string'
+              ? (candidate as Record<string, unknown>).url as string
+              : null
+          if (url) visible.push(`![图片](${url})`)
+        } else if (['function_call_output', 'tool_result', 'computer_call_output'].includes(type)) {
+          const output = block.output ?? block.content
+          if (typeof output === 'string') visible.push(output)
+        }
+      }
+      return visible.join('')
+    }
     try {
       return JSON.stringify(content, null, 2)
     } catch {
@@ -188,7 +231,8 @@ export const useMessageHandler = ({
     rawContent: unknown,
     toolCalls?: ToolCall[],
     parentId?: string | null,
-    usageMetadata?: Record<string, unknown> | null
+    usageMetadata?: Record<string, unknown> | null,
+    artifact?: ChatResponse['artifact']
   ) {
     const content = normalizeContent(rawContent)
 
@@ -205,6 +249,7 @@ export const useMessageHandler = ({
             ...updated[index],
             ...(content && { content: (updated[index].content as string) + content }),
             ...(usageMetadata && { usage_metadata: usageMetadata }),
+            ...(artifact && { artifact }),
           }
           return updated
         }
@@ -220,6 +265,7 @@ export const useMessageHandler = ({
             // parent 为全量列表最后一条（流式场景下即当前激活末尾的 human 消息）
             parent_id: parentId,
             tool_calls: toolCalls,
+            ...(artifact && { artifact }),
           },
         ]
       }
@@ -235,6 +281,7 @@ export const useMessageHandler = ({
             ...(parentId !== undefined && { parent_id: parentId }),
             tool_calls: toolCalls ?? updated[index].tool_calls ?? [],
             ...(usageMetadata !== undefined && { usage_metadata: usageMetadata }),
+            ...(artifact && { artifact }),
           }
           return updated
         }
@@ -248,6 +295,7 @@ export const useMessageHandler = ({
             parent_id: parentId ?? prev[prev.length - 1]?.id ?? null,
             tool_calls: toolCalls,
             ...(usageMetadata !== undefined && { usage_metadata: usageMetadata }),
+            ...(artifact && { artifact }),
           },
         ]
       }
@@ -272,7 +320,8 @@ export const useMessageHandler = ({
       chunk.content,
       chunk.tool_calls,
       chunk.parent_id,
-      chunk.usage_metadata
+      chunk.usage_metadata,
+      chunk.artifact
     )
   }
 
@@ -312,6 +361,11 @@ export const useMessageHandler = ({
         setStreamError(data.message ?? '发生未知错误')
         return true
       }
+      if (eventType === 'warning') {
+        const data = JSON.parse(dataLine) as { message?: string }
+        setStreamWarning(data.message ?? '模型响应未完整生成，已保留可用内容。')
+        return false
+      }
       if (eventType === 'tool_approval_required') {
         const data = JSON.parse(dataLine) as { message_id: string }
         const aiMsg = allMessagesRef.current.find((m) => m.id === data.message_id)
@@ -326,6 +380,18 @@ export const useMessageHandler = ({
         refreshSessions()
         return false
       }
+      if (eventType === 'structured_output') {
+        const data = JSON.parse(dataLine) as {
+          message_id: string
+          artifact: NonNullable<ChatResponse['artifact']>
+        }
+        setAllMessages((prev) =>
+          prev.map((message) =>
+            message.id === data.message_id ? { ...message, artifact: data.artifact } : message
+          )
+        )
+        return false
+      }
       handleStreamMessage(dataLine)
       return false
     })
@@ -333,7 +399,13 @@ export const useMessageHandler = ({
 
   async function startChatStream(
     sid: string,
-    body: { content: string | null; parent_id: string | null; id: string; file_ids?: number[] }
+    body: {
+      content: string | null
+      parent_id: string | null
+      id: string
+      file_ids?: number[]
+      structured_output_schema_id?: number | null
+    }
   ) {
     const baseUrl = getStreamBaseUrl()
     const token = tokenManager.getToken() ?? ''
@@ -385,6 +457,7 @@ export const useMessageHandler = ({
           files: msg.files,
           approval_status: msg.approval_status ?? null,
           usage_metadata: msg.usage_metadata ?? null,
+          artifact: msg.artifact ?? null,
         }))
 
         setAllMessages(normalized)
@@ -437,6 +510,7 @@ export const useMessageHandler = ({
       parent_id: lastId,
       id: newId,
       file_ids: fileIds,
+      structured_output_schema_id: structuredOutputSchemaId,
     })
   }
 
@@ -481,6 +555,7 @@ export const useMessageHandler = ({
       content: editingContent,
       parent_id: msg.parent_id ?? null,
       id: newId,
+      structured_output_schema_id: structuredOutputSchemaId,
     })
   }
 
@@ -502,6 +577,7 @@ export const useMessageHandler = ({
       content: null,
       parent_id: msg.parent_id ?? null,
       id: '',
+      structured_output_schema_id: structuredOutputSchemaId,
     })
   }
 
@@ -554,7 +630,11 @@ export const useMessageHandler = ({
           Accept: 'text/event-stream',
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ message_id: messageId, approved }),
+        body: JSON.stringify({
+          message_id: messageId,
+          approved,
+          structured_output_schema_id: structuredOutputSchemaId,
+        }),
         signal: controller.signal,
       })
 
@@ -639,6 +719,7 @@ export const useMessageHandler = ({
   // ─────────────────────────────────────────────────────────────────────────
 
   const clearStreamError = useCallback(() => setStreamError(null), [])
+  const clearStreamWarning = useCallback(() => setStreamWarning(null), [])
 
   return {
     displayMessages,
@@ -648,6 +729,7 @@ export const useMessageHandler = ({
     editingContent,
     pendingApproval,
     streamError,
+    streamWarning,
     setEditingContent,
     handleSendMessage,
     handleApproveTools,
@@ -659,6 +741,7 @@ export const useMessageHandler = ({
     handleSiblingSwitch,
     getSiblingInfo,
     clearStreamError,
+    clearStreamWarning,
     stopStream,
   }
 }

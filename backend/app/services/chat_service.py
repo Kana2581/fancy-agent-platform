@@ -1,4 +1,5 @@
 import asyncio
+import json
 import re
 from typing import List, AsyncGenerator, Tuple, Optional, Dict
 
@@ -60,6 +61,7 @@ class ChatService:
             agent: CompiledStateGraph,
             messages: List[BaseMessage],
             leaf_message_id: str,
+            structured_output_context: Optional[dict] = None,
     ):
 
         _trace_ctx = (
@@ -127,17 +129,79 @@ class ChatService:
 
                         if "tools" in chunk:
                             res = chunk["tools"]["messages"][-1]
+                            if (
+                                structured_output_context
+                                and getattr(res, "name", None) == "structured_output"
+                            ):
+                                continue
                             update_parent(res)
                             processor.add(res)
                             yield res, parent_id
 
                         elif "model" in chunk:
-                            res = chunk["model"]["messages"][-1]
+                            structured_response = chunk["model"].get("structured_response")
+                            model_messages = chunk["model"]["messages"]
+                            if structured_response is not None:
+                                # Older tool-based structured output can append an
+                                # artificial ToolMessage after the AI tool call. The
+                                # artifact belongs to the AI node, while the artificial
+                                # tool message stays internal.
+                                res = next(
+                                    (
+                                        message
+                                        for message in reversed(model_messages)
+                                        if isinstance(message, AIMessage)
+                                    ),
+                                    model_messages[-1],
+                                )
+                            else:
+                                res = model_messages[-1]
+                                if structured_output_context and (
+                                    getattr(res, "name", None) == "structured_output"
+                                    or (
+                                        isinstance(res, AIMessage)
+                                        and any(
+                                            call.get("name") == "structured_output"
+                                            for call in (getattr(res, "tool_calls", None) or [])
+                                        )
+                                    )
+                                ):
+                                    if getattr(res, "id", None):
+                                        chunk_buffer.pop(res.id, None)
+                                    continue
                             update_parent(res)
                             # 模型完整产出，对应 chunk 缓存作废
                             if getattr(res, "id", None):
                                 chunk_buffer.pop(res.id, None)
-                            processor.add(res)
+                            artifact = None
+                            if structured_response is not None and structured_output_context:
+                                if hasattr(structured_response, "model_dump"):
+                                    structured_response = structured_response.model_dump(mode="json")
+                                artifact = {
+                                    "type": "structured_output",
+                                    **structured_output_context,
+                                    "data": structured_response,
+                                    "status": "valid",
+                                }
+                                res.content = json.dumps(
+                                    structured_response,
+                                    ensure_ascii=False,
+                                    sort_keys=True,
+                                )
+                                res.additional_kwargs["artifact"] = artifact
+                            processor.add(res, artifact=artifact)
+                            if structured_response is not None and structured_output_context:
+                                # Keep legacy artificial ToolMessages in the model context
+                                # so historical AI tool calls remain well-formed on the
+                                # next turn. They are intentionally never yielded to the
+                                # user-facing stream.
+                                for internal_message in model_messages:
+                                    if (
+                                        isinstance(internal_message, ToolMessage)
+                                        and getattr(internal_message, "name", None)
+                                        == "structured_output"
+                                    ):
+                                        processor.add(internal_message)
                             logger.info(f"{res}")
                             yield res, parent_id
 

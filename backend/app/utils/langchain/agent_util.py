@@ -1,4 +1,4 @@
-from typing import List, Tuple
+from typing import Any, List, Tuple
 
 from langchain.agents import create_agent
 from langchain_core.language_models import BaseChatModel
@@ -23,6 +23,7 @@ from app.utils.langchain.middleware import (
     ToolCallInterruptMiddleware,
     ToolExecutionLoggingMiddleware,
 )
+from app.utils.langchain.api_mode import model_init_kwargs
 
 logger = get_logger(__name__)
 
@@ -30,7 +31,8 @@ def create_langchain_agent_with_middleware(model: BaseChatModel,
                                            tools: Optional[List[BaseTool]],
                                            system_prompt: str = "You are a helpful assistant.",
                                            max_token=8000,
-                                           human_in_the_loop=False):
+                                           human_in_the_loop=False,
+                                           response_format: Any = None):
     today = datetime.now(tz=timezone(timedelta(hours=8))).strftime("%Y-%m-%d")
     system_prompt = f"{system_prompt}\n\n今天日期：{today}"
 
@@ -48,6 +50,7 @@ def create_langchain_agent_with_middleware(model: BaseChatModel,
         tools=tools,
         system_prompt=system_prompt,
         middleware=middleware,
+        response_format=response_format,
     )
 
 
@@ -58,7 +61,7 @@ async def _build_model_and_tools(
 ) -> Tuple[BaseChatModel, List[BaseTool]]:
     """Shared logic for building the LLM model and tool list from agent config."""
     model_config = ValidChatModel.model_validate(agent_data.llm)
-    model_kwargs = model_config.model_dump()
+    model_kwargs = model_init_kwargs(model_config)
     if model_config.model_provider in ("openai", "openai-like"):
         model_kwargs["stream_usage"] = True
     model = init_chat_model(**model_kwargs)
@@ -177,7 +180,11 @@ async def _build_system_prompt(
     return system_prompt
 
 
-async def get_langchian_agent(agent_data: ValidAgent, session_id: Optional[str] = None):
+async def get_langchian_agent(
+    agent_data: ValidAgent,
+    session_id: Optional[str] = None,
+    response_format: Any = None,
+):
     """Build a compiled LangGraph agent from ValidAgent config."""
     if agent_data.llm is None:
         raise ValueError("Agent has no LLM config")
@@ -191,10 +198,15 @@ async def get_langchian_agent(agent_data: ValidAgent, session_id: Optional[str] 
         system_prompt=system_prompt,
         max_token=agent_data.max_token_size,
         human_in_the_loop=agent_data.human_in_the_loop,
+        response_format=response_format,
     )
 
 
-async def get_langchain_agent_and_tools(agent_data: ValidAgent, session_id: Optional[str] = None) -> Tuple:
+async def get_langchain_agent_and_tools(
+    agent_data: ValidAgent,
+    session_id: Optional[str] = None,
+    response_format: Any = None,
+) -> Tuple:
     """Build agent and return (agent, tools_list) for use in the approve-tool endpoint."""
     if agent_data.llm is None:
         raise ValueError("Agent has no LLM config")
@@ -208,5 +220,6 @@ async def get_langchain_agent_and_tools(agent_data: ValidAgent, session_id: Opti
         system_prompt=system_prompt,
         max_token=agent_data.max_token_size,
         human_in_the_loop=agent_data.human_in_the_loop,
+        response_format=response_format,
     )
     return agent, tools

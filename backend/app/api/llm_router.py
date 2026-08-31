@@ -27,7 +27,10 @@ async def create_llm(
 ):
     data_dict = data.model_dump()
     data_dict.update({"user_id": user_id})
-    return await service.create_llm(data_dict)
+    try:
+        return await service.create_llm(data_dict)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
 
 
 @router.get("/{llm_id}", response_model=LLMOut)
@@ -62,7 +65,10 @@ async def update_llm(
     llm = await service.get_llm(llm_id)
     if not llm or llm.user_id != user_id:
         raise HTTPException(status_code=404, detail="LLM model not found")
-    updated = await service.update_llm(llm_id, data)
+    try:
+        updated = await service.update_llm(llm_id, data)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
     return updated
 
 

@@ -7,6 +7,7 @@ from app.mappers.llm_mapper import LLMMapper
 from app.schemas.llm_schema import LLMCreate, LLMUpdate, LLMTestRequest
 from app.schemas.dto.langchian import ValidChatModel
 from app.models.llm import LLM
+from app.utils.langchain.api_mode import model_init_kwargs
 
 
 class LLMService:
@@ -16,14 +17,21 @@ class LLMService:
         self.mapper = LLMMapper(db)
 
     async def create_llm(self, data: dict) -> LLM:
+        self._validate_api_mode(data.get("provider"), data.get("api_mode", "chat_completions"))
         res = await self.mapper.create_from_dict(data)
         await self.db.commit()
         return res
 
     async def update_llm(self, llm_id: int, data: LLMUpdate) -> Optional[LLM]:
+        existing = await self.mapper.get_by_id(llm_id)
+        update_data = data.model_dump(exclude_unset=True)
+        self._validate_api_mode(
+            update_data.get("provider", existing.provider if existing else None),
+            update_data.get("api_mode", existing.api_mode if existing else "chat_completions"),
+        )
         res = await self.mapper.update_by_id(
             llm_id,
-            data.model_dump(exclude_unset=True)
+            update_data
         )
         await self.db.commit()
         return res
@@ -47,13 +55,19 @@ class LLMService:
             return False, "API Key 不能为空"
 
         try:
+            self._validate_api_mode(data.provider, data.api_mode)
+        except ValueError as exc:
+            return False, str(exc)
+
+        try:
             model_config = ValidChatModel.model_validate({
                 "provider": data.provider,
                 "model_name": data.model_name,
                 "base_url": data.base_url,
                 "api_key": api_key,
+                "api_mode": data.api_mode,
             })
-            model = init_chat_model(**model_config.model_dump())
+            model = init_chat_model(**model_init_kwargs(model_config))
             resp = await model.ainvoke("hi")
             content = getattr(resp, "content", "") or ""
             if isinstance(content, list):
@@ -77,3 +91,13 @@ class LLMService:
             offset=offset,
             limit=limit,
         )
+
+    @staticmethod
+    def _validate_api_mode(provider: Optional[str], api_mode: Optional[str]) -> None:
+        """Responses is an OpenAI/OpenAI-compatible protocol only."""
+        if api_mode != "responses":
+            return
+        normalized = (provider or "").strip().lower()
+        # These entries all resolve to LangChain's OpenAI-compatible adapter.
+        if normalized not in {"openai", "custom", "aliyun"}:
+            raise ValueError("Responses API 仅支持 OpenAI 或 OpenAI-compatible 配置")

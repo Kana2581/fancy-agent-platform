@@ -10,6 +10,7 @@ class ChatRequest(BaseModel):
     content: Optional[str] = None
     id: Optional[str] = None
     file_ids:Optional[List[int]] = None
+    structured_output_schema_id: Optional[int] = None
     @field_validator("id", mode="before")
     @classmethod
     def empty_str_to_none(cls, v):
@@ -43,6 +44,7 @@ class ChatResponse(BaseModel):
     files:Optional[List[SimpleFile]] = None
     usage_metadata: Optional[Dict[str, Any]] = None
     approval_status: Optional[str] = None
+    artifact: Optional[Dict[str, Any]] = None
 
     @model_validator(mode="after")
     def _resign_inline_images(self):
@@ -59,6 +61,7 @@ class CompressRequest(BaseModel):
 class ApproveToolRequest(BaseModel):
     message_id: str
     approved: bool
+    structured_output_schema_id: Optional[int] = None
 
 
 

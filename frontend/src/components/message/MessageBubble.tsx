@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { Bot, Wrench } from 'lucide-react'
 import type { SimpleFile } from '../../api'
+import type { StructuredOutputArtifact } from '../../api'
 import { AIMessage } from './AIMessage'
 import { HumanMessage } from './HumanMessage'
 import { ToolMessage } from './ToolMessage'
@@ -12,6 +13,7 @@ export const MessageBubble: React.FC<{
   content: string
   files?: SimpleFile[]
   toolCalls?: ToolCallData[]
+  artifact?: StructuredOutputArtifact | null
   usageMetadata?: UsageMetadata | null
   messageId?: string
   isEditing?: boolean
@@ -29,6 +31,7 @@ export const MessageBubble: React.FC<{
   content,
   files,
   toolCalls,
+  artifact,
   usageMetadata,
   messageId,
   isEditing = false,
@@ -70,7 +73,9 @@ export const MessageBubble: React.FC<{
               : 'bg-gray-50 dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 shadow-md'
           } rounded-xl px-5 py-4`}
         >
-          {type === 'ai' && <AIMessage content={content} toolCalls={toolCalls} />}
+          {type === 'ai' && (
+            <AIMessage content={content} toolCalls={toolCalls} artifact={artifact} />
+          )}
           {type === 'human' && (
             <HumanMessage
               content={content}

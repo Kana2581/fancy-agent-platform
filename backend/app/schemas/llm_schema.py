@@ -1,5 +1,5 @@
 # app/schemas/llm_schema.py
-from typing import Optional
+from typing import Literal, Optional
 from datetime import datetime
 from pydantic import BaseModel
 
@@ -10,6 +10,7 @@ class LLMCreate(BaseModel):
     model_name: str
     base_url: Optional[str] = None
     api_key: Optional[str] = None
+    api_mode: Literal["chat_completions", "responses"] = "chat_completions"
 
 
 class LLMUpdate(BaseModel):
@@ -17,6 +18,7 @@ class LLMUpdate(BaseModel):
     model_name: Optional[str] = None
     base_url: Optional[str] = None
     api_key: Optional[str] = None
+    api_mode: Optional[Literal["chat_completions", "responses"]] = None
 
 
 class LLMTestRequest(BaseModel):
@@ -25,6 +27,7 @@ class LLMTestRequest(BaseModel):
     base_url: Optional[str] = None
     api_key: Optional[str] = None
     llm_id: Optional[int] = None
+    api_mode: Literal["chat_completions", "responses"] = "chat_completions"
 
 
 class LLMTestResult(BaseModel):
@@ -38,6 +41,7 @@ class LLMOut(BaseModel):
     provider: str
     model_name: str
     base_url: Optional[str]
+    api_mode: Literal["chat_completions", "responses"] = "chat_completions"
     created_at: datetime
     updated_at: datetime
     model_config = {

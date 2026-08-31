@@ -63,9 +63,12 @@ class MessageProcessor:
         self.parent_id = parent_id
         self.user_id = user_id
         self._messages: list[BaseMessage] = []
+        self._artifacts: dict[str, dict] = {}
 
-    def add(self, message: BaseMessage) -> None:
+    def add(self, message: BaseMessage, artifact: Optional[dict] = None) -> None:
         self._messages.append(message)
+        if artifact and message.id:
+            self._artifacts[message.id] = artifact
 
     def extend(self, messages: list[BaseMessage]) -> None:
         self._messages.extend(messages)
@@ -88,6 +91,8 @@ class MessageProcessor:
             )
 
             orm_messages.append(orm)
+            if msg.id in self._artifacts:
+                orm.artifact = self._artifacts[msg.id]
 
             # ⭐ 核心：下一个消息的 parent = 当前消息的 id
             current_parent_id = orm.id

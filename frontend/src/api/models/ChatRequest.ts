@@ -7,4 +7,5 @@ export type ChatRequest = {
   content?: string | null
   id?: string | null
   file_ids?: Array<number> | null
+  structured_output_schema_id?: number | null
 }

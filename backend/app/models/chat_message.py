@@ -48,5 +48,10 @@ class ChatMessage(Base, TimestampMixin):
 
     usage_metadata = Column(JSON, nullable=True)
 
+    # LangChain/OpenAI protocol fields. They are intentionally internal: API
+    # response schemas do not expose them, but history reconstruction needs them.
+    response_metadata = Column(JSON, nullable=True)
+    additional_kwargs = Column(JSON, nullable=True)
+
 
 
