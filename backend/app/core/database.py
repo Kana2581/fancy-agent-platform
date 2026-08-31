@@ -70,6 +70,26 @@ async def init_db():
 
 
 async def _ensure_runtime_schema(conn):
+    def table_columns(sync_conn, table: str) -> set[str]:
+        return {column["name"] for column in inspect(sync_conn).get_columns(table)}
+
+    llm_columns = await conn.run_sync(table_columns, "llms")
+    if "api_mode" not in llm_columns:
+        await conn.execute(text(
+            "ALTER TABLE llms ADD COLUMN api_mode VARCHAR(32) NOT NULL DEFAULT 'chat_completions'"
+        ))
+
+    api_tool_columns = await conn.run_sync(table_columns, "api_tools")
+    if "request_template" not in api_tool_columns:
+        await conn.execute(text("ALTER TABLE api_tools ADD COLUMN request_template JSON NULL"))
+    if "response_template" not in api_tool_columns:
+        await conn.execute(text("ALTER TABLE api_tools ADD COLUMN response_template TEXT NULL"))
+
+    message_columns = await conn.run_sync(table_columns, "chat_message")
+    for column_name in ("response_metadata", "additional_kwargs"):
+        if column_name not in message_columns:
+            await conn.execute(text(f"ALTER TABLE chat_message ADD COLUMN {column_name} JSON NULL"))
+
     def has_session_auto_title_generated(sync_conn) -> bool:
         columns = inspect(sync_conn).get_columns("sessions")
         return any(column["name"] == "auto_title_generated" for column in columns)

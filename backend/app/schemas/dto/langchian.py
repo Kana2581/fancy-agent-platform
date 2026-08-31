@@ -61,9 +61,9 @@ class ValidApiTool(BaseModel):
     method: str
     headers: Optional[dict]
     param_location: str
-    fixed_params: Optional[dict]
+    request_template: Optional[Any]
     tool_params: Optional[List[Any]]
-    response_extract: Optional[List[Any]]
+    response_template: Optional[str]
     response_max_chars: int
 
 

@@ -35,6 +35,8 @@ CREATE TABLE `api_tools` (
   `method` varchar(10) NOT NULL DEFAULT 'GET',
   `headers` json DEFAULT NULL,
   `param_location` varchar(20) NOT NULL DEFAULT 'query',
+  `request_template` json DEFAULT NULL,
+  `response_template` text,
   `fixed_params` json DEFAULT NULL,
   `tool_params` json DEFAULT NULL,
   `response_extract` json DEFAULT NULL,

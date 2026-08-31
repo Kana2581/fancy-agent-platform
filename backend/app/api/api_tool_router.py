@@ -2,7 +2,7 @@ import asyncio
 from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from app.deps.service import get_api_tool_service
 from app.deps.user import get_current_user
@@ -13,7 +13,7 @@ router = APIRouter(prefix="/api-tools", tags=["API Tools"])
 
 
 class TestRequest(BaseModel):
-    params: dict = {}
+    params: dict = Field(default_factory=dict)
 
 
 @router.post("", response_model=ApiToolOut)
@@ -91,9 +91,9 @@ async def test_api_tool(
         "method": tool.method,
         "headers": tool.headers or {},
         "param_location": tool.param_location,
-        "fixed_params": tool.fixed_params or {},
+        "request_template": tool.request_template or {},
         "tool_params": tool.tool_params or [],
-        "response_extract": tool.response_extract or [],
+        "response_template": tool.response_template,
         "response_max_chars": tool.response_max_chars,
     }
 
