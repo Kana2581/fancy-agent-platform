@@ -80,6 +80,12 @@ async def _ensure_runtime_schema(conn):
             "ALTER TABLE llms ADD COLUMN api_mode VARCHAR(32) NOT NULL DEFAULT 'chat_completions'"
         ))
 
+    api_tool_columns = await conn.run_sync(table_columns, "api_tools")
+    if "request_template" not in api_tool_columns:
+        await conn.execute(text("ALTER TABLE api_tools ADD COLUMN request_template JSON NULL"))
+    if "response_template" not in api_tool_columns:
+        await conn.execute(text("ALTER TABLE api_tools ADD COLUMN response_template TEXT NULL"))
+
     message_columns = await conn.run_sync(table_columns, "chat_message")
     for column_name in ("response_metadata", "additional_kwargs"):
         if column_name not in message_columns:

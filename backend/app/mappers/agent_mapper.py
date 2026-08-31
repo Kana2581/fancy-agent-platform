@@ -89,9 +89,9 @@ class AgentMapper(BaseMapper[Agent]):
                 "method": t.method,
                 "headers": t.headers,
                 "param_location": t.param_location,
-                "fixed_params": t.fixed_params,
+                "request_template": t.request_template,
                 "tool_params": t.tool_params,
-                "response_extract": t.response_extract,
+                "response_template": t.response_template,
                 "response_max_chars": t.response_max_chars,
             }
             for t in api_tool_rows

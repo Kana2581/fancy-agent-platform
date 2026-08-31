@@ -5,18 +5,12 @@ from typing import Any, List, Literal, Optional
 from pydantic import BaseModel, Field, field_validator
 
 
-class ParamConfig(BaseModel):
+class TemplateVariable(BaseModel):
     name: str
-    path: str
     type: Literal["string", "integer", "number", "boolean"]
-    description: str
+    description: str = ""
     required: bool = True
     default: Any = None
-
-
-class ResponseExtract(BaseModel):
-    path: str
-    alias: str
 
 
 class ApiToolBase(BaseModel):
@@ -26,9 +20,9 @@ class ApiToolBase(BaseModel):
     method: Literal["GET", "POST", "PUT", "DELETE", "PATCH"] = "GET"
     headers: dict[str, str] = Field(default_factory=dict)
     param_location: Literal["query", "body", "path_and_query", "path_and_body"] = "query"
-    fixed_params: dict[str, Any] = Field(default_factory=dict)
-    tool_params: List[ParamConfig] = Field(default_factory=list)
-    response_extract: List[ResponseExtract] = Field(default_factory=list)
+    request_template: Any = Field(default_factory=dict)
+    tool_params: List[TemplateVariable] = Field(default_factory=list)
+    response_template: Optional[str] = None
     response_max_chars: int = 2000
 
     @field_validator("name")
@@ -52,9 +46,9 @@ class ApiToolUpdate(BaseModel):
     method: Optional[Literal["GET", "POST", "PUT", "DELETE", "PATCH"]] = None
     headers: Optional[dict[str, str]] = None
     param_location: Optional[Literal["query", "body", "path_and_query", "path_and_body"]] = None
-    fixed_params: Optional[dict[str, Any]] = None
-    tool_params: Optional[List[ParamConfig]] = None
-    response_extract: Optional[List[ResponseExtract]] = None
+    request_template: Optional[Any] = None
+    tool_params: Optional[List[TemplateVariable]] = None
+    response_template: Optional[str] = None
     response_max_chars: Optional[int] = None
 
     @field_validator("name")

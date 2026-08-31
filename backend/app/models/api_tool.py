@@ -15,6 +15,10 @@ class ApiTool(Base, TimestampMixin):
     method = Column(String(10), nullable=False, default="GET")
     headers = Column(JSON, nullable=True)           # dict[str, str]
     param_location = Column(String(20), nullable=False, default="query")
+    request_template = Column(JSON, nullable=True)  # query/body template with {{variables}}
+    response_template = Column(Text, nullable=True)  # response template with {{path}}
+    # Legacy columns are retained so existing databases can be upgraded without
+    # dropping user data. New tools use request_template/response_template.
     fixed_params = Column(JSON, nullable=True)      # nested dict
     tool_params = Column(JSON, nullable=True)       # list[ParamConfig]
     response_extract = Column(JSON, nullable=True)  # list[ResponseExtract]
